@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import Link from 'next/link';
 import { 
   Building2, 
   Layers, 
@@ -49,19 +48,10 @@ export default function CommunityPage() {
             </div>
           </div>
 
-          {/* Central Environment Switcher Pill */}
-          <div className="flex items-center border-2 border-black p-1 bg-neutral-100">
-            <Link
-              href="/"
-              className="px-3 py-1 text-xs font-bold text-neutral-600 hover:text-black hover:bg-white transition-all flex items-center gap-1.5"
-            >
-              <span>🐔</span>
-              <span>Poultry Farm</span>
-            </Link>
-            <div className="px-3 py-1 text-xs font-bold bg-black text-white flex items-center gap-1.5 shadow-sm">
-              <span>🏢</span>
-              <span>Gated Community</span>
-            </div>
+          {/* Precinct Indicator Badge */}
+          <div className="hidden sm:flex items-center gap-2 border-2 border-black px-3 py-1 bg-neutral-50 text-xs font-mono font-bold">
+            <span className="w-2 h-2 rounded-full bg-black animate-pulse" />
+            <span>PRECINCT GRID: ACTIVE</span>
           </div>
 
           {/* Right Status */}
