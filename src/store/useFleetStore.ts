@@ -97,7 +97,7 @@ const getStoredRobotCount = (): number => {
       // ignore
     }
   }
-  return 500;
+  return 10;
 };
 
 export const useFleetStore = create<FleetStore>((set, get) => ({
@@ -114,7 +114,7 @@ export const useFleetStore = create<FleetStore>((set, get) => ({
   alerts: [],
   events: [],
   analytics: emptyAnalytics,
-  simulationConfig: { state: 'stopped', speed: 1, robotCount: 500, taskGenerationRate: 10, isControllerOnline: true, commRangeUnits: 100 },
+  simulationConfig: { state: 'stopped', speed: 1, robotCount: 10, taskGenerationRate: 10, isControllerOnline: true, commRangeUnits: 100 },
   map: { width: 1200, height: 800, gridSize: 40, obstacles: [], chargingStations: [], taskStations: [], sensors: [], waterPipes: [] },
   heroDemoState: null,
   isControllerOnline: true,
