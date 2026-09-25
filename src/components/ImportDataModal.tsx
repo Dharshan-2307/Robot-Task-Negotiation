@@ -116,39 +116,39 @@ export default function ImportDataModal({ isOpen, onClose }: ImportDataModalProp
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-      <div className="w-full max-w-2xl bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
+      <div className="w-full max-w-2xl bg-white border border-slate-300 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         {/* Modal Header */}
-        <div className="flex items-center justify-between p-4 border-b border-slate-800 bg-slate-950/70">
+        <div className="flex items-center justify-between p-4 border-b border-slate-200 bg-slate-50">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-lg bg-cyan-600/20 text-cyan-400 border border-cyan-500/30">
+            <div className="p-2 rounded-lg bg-slate-200 text-black border border-slate-300">
               <FileSpreadsheet className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-slate-100 uppercase tracking-wider font-mono">
+              <h2 className="text-sm font-bold text-black uppercase tracking-wider font-mono">
                 Import Fleet & Task Data
               </h2>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] text-slate-500">
                 Load custom robots, tasks, and coordinates from Excel, CSV, or Google Sheets
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+            className="p-1 rounded-lg text-slate-400 hover:text-black hover:bg-slate-100 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex border-b border-slate-800 bg-slate-950/40 p-1">
+        <div className="flex border-b border-slate-200 bg-slate-50 p-1 gap-1">
           <button
             onClick={() => setActiveTab('excel')}
-            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all ${
               activeTab === 'excel'
-                ? 'bg-slate-800 text-cyan-400 border border-slate-700 shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'bg-black text-white shadow-xs'
+                : 'text-slate-600 hover:text-black hover:bg-white'
             }`}
           >
             <FileSpreadsheet className="w-4 h-4" />
@@ -156,10 +156,10 @@ export default function ImportDataModal({ isOpen, onClose }: ImportDataModalProp
           </button>
           <button
             onClick={() => setActiveTab('google-sheet')}
-            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all ${
               activeTab === 'google-sheet'
-                ? 'bg-slate-800 text-cyan-400 border border-slate-700 shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'bg-black text-white shadow-xs'
+                : 'text-slate-600 hover:text-black hover:bg-white'
             }`}
           >
             <Globe className="w-4 h-4" />
@@ -179,8 +179,8 @@ export default function ImportDataModal({ isOpen, onClose }: ImportDataModalProp
                 onClick={() => fileInputRef.current?.click()}
                 className={`flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
                   isDragging
-                    ? 'border-cyan-400 bg-cyan-950/30'
-                    : 'border-slate-700 hover:border-slate-500 bg-slate-800/30 hover:bg-slate-800/50'
+                    ? 'border-black bg-slate-100'
+                    : 'border-slate-300 hover:border-black bg-slate-50/50 hover:bg-slate-50'
                 }`}
               >
                 <input
@@ -190,37 +190,37 @@ export default function ImportDataModal({ isOpen, onClose }: ImportDataModalProp
                   className="hidden"
                   onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
                 />
-                <UploadCloud className="w-10 h-10 text-cyan-400 mb-2 opacity-80" />
-                <p className="text-xs font-semibold text-slate-200">
+                <UploadCloud className="w-10 h-10 text-black mb-2 opacity-80" />
+                <p className="text-xs font-bold text-slate-900">
                   Click to browse or drag and drop your file here
                 </p>
                 <p className="text-[11px] text-slate-500 mt-1">
-                  Supports Microsoft Excel (<code className="text-cyan-400">.xlsx</code>, <code className="text-cyan-400">.xls</code>) or <code className="text-cyan-400">.csv</code>
+                  Supports Microsoft Excel (<code className="text-black font-semibold">.xlsx</code>, <code className="text-black font-semibold">.xls</code>) or <code className="text-black font-semibold">.csv</code>
                 </p>
               </div>
 
               {/* Sample Template Download */}
-              <div className="flex items-center justify-between p-3 bg-slate-800/40 border border-slate-700/50 rounded-xl">
+              <div className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl">
                 <div>
-                  <p className="text-xs font-medium text-slate-300">Need a sample format for your team?</p>
+                  <p className="text-xs font-semibold text-slate-800">Need a sample format for your team?</p>
                   <p className="text-[10px] text-slate-500">Pre-formatted Excel workbook with Robots and Tasks sheets</p>
                 </div>
                 <button
                   onClick={handleDownloadTemplate}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-semibold rounded-lg transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-800 text-xs font-bold border border-slate-300 rounded-lg shadow-2xs transition-colors"
                 >
-                  <Download className="w-3.5 h-3.5" />
+                  <Download className="w-3.5 h-3.5 text-black" />
                   Sample Excel
                 </button>
               </div>
             </div>
           ) : (
             <div className="space-y-3">
-              <div className="p-3 bg-slate-800/40 border border-slate-700/50 rounded-xl space-y-2">
-                <label className="text-xs font-semibold text-slate-300 block">
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                <label className="text-xs font-bold text-slate-800 block">
                   Google Sheet Shareable URL
                 </label>
-                <p className="text-[11px] text-slate-400">
+                <p className="text-[11px] text-slate-500">
                   Paste the Google Sheets link below. Ensure the sheet permission is set to <strong>"Anyone with the link can view"</strong>.
                 </p>
                 <div className="flex gap-2">
@@ -229,12 +229,12 @@ export default function ImportDataModal({ isOpen, onClose }: ImportDataModalProp
                     placeholder="https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit..."
                     value={googleSheetUrl}
                     onChange={(e) => setGoogleSheetUrl(e.target.value)}
-                    className="flex-1 px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-cyan-500 font-mono"
+                    className="flex-1 px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-black font-mono"
                   />
                   <button
                     onClick={handleGoogleSheetSync}
                     disabled={loading || !googleSheetUrl.trim()}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 disabled:opacity-40 text-white text-xs font-semibold rounded-lg transition-colors whitespace-nowrap"
+                    className="flex items-center gap-1.5 px-4 py-2 bg-black hover:bg-slate-800 disabled:opacity-40 text-white text-xs font-bold rounded-lg transition-colors whitespace-nowrap"
                   >
                     {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Globe className="w-4 h-4" />}
                     Fetch & Sync
@@ -246,46 +246,46 @@ export default function ImportDataModal({ isOpen, onClose }: ImportDataModalProp
 
           {/* Loading Indicator */}
           {loading && (
-            <div className="flex items-center justify-center p-6 text-slate-400 text-xs gap-2">
-              <Loader2 className="w-4 h-4 animate-spin text-cyan-400" />
-              <span>Analyzing spreadsheet columns and rows...</span>
+            <div className="flex items-center justify-center p-6 text-slate-600 text-xs gap-2">
+              <Loader2 className="w-4 h-4 animate-spin text-black" />
+              <span className="font-medium">Analyzing spreadsheet columns and rows...</span>
             </div>
           )}
 
           {/* Success Message Banner */}
           {successMessage && (
-            <div className="flex items-center gap-2 p-3 bg-emerald-950/40 border border-emerald-700/50 text-emerald-300 rounded-xl text-xs font-medium">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded-xl text-xs font-semibold">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
               <span>{successMessage}</span>
             </div>
           )}
 
           {/* Parsed Result Preview */}
           {importResult && !loading && (
-            <div className="p-3 bg-slate-800/40 border border-slate-700/60 rounded-xl space-y-3">
-              <div className="flex items-center justify-between border-b border-slate-700/50 pb-2">
-                <span className="text-xs font-bold text-slate-200 uppercase tracking-wider font-mono">
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+              <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                <span className="text-xs font-bold text-slate-900 uppercase tracking-wider font-mono">
                   Parsed Data Preview
                 </span>
-                <div className="flex items-center gap-3 text-xs font-mono">
-                  <span className="text-cyan-400 font-bold">{importResult.summary.robotsCount} Robots</span>
-                  <span className="text-emerald-400 font-bold">{importResult.summary.tasksCount} Tasks</span>
+                <div className="flex items-center gap-3 text-xs font-mono font-bold">
+                  <span className="text-black">{importResult.summary.robotsCount} Robots</span>
+                  <span className="text-slate-600">{importResult.summary.tasksCount} Tasks</span>
                 </div>
               </div>
 
               {importResult.errors.length > 0 ? (
-                <div className="p-2.5 bg-rose-950/30 border border-rose-800/40 text-rose-300 rounded-lg text-xs space-y-1">
+                <div className="p-2.5 bg-rose-50 border border-rose-200 text-rose-900 rounded-lg text-xs space-y-1">
                   {importResult.errors.map((err, i) => (
                     <div key={i} className="flex items-start gap-1.5">
-                      <AlertCircle className="w-3.5 h-3.5 text-rose-400 shrink-0 mt-0.5" />
+                      <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0 mt-0.5" />
                       <span>{err}</span>
                     </div>
                   ))}
                 </div>
               ) : (
                 <div className="space-y-2">
-                  <p className="text-[11px] text-slate-400">
-                    Detected sheets: <span className="font-mono text-slate-200">{importResult.summary.detectedSheets.join(', ')}</span>
+                  <p className="text-[11px] text-slate-600">
+                    Detected sheets: <span className="font-mono font-bold text-black">{importResult.summary.detectedSheets.join(', ')}</span>
                   </p>
 
                   {/* Sample Robot Rows */}
@@ -294,7 +294,7 @@ export default function ImportDataModal({ isOpen, onClose }: ImportDataModalProp
                       <span className="text-slate-500 font-semibold uppercase text-[10px]">Robot Samples:</span>
                       <div className="flex flex-wrap gap-1.5">
                         {importResult.robots.slice(0, 5).map(r => (
-                          <span key={r.id} className="px-2 py-0.5 rounded bg-slate-800 text-cyan-300 font-mono text-[10px] border border-slate-700">
+                          <span key={r.id} className="px-2 py-0.5 rounded bg-white text-slate-900 font-mono text-[10px] border border-slate-300 font-medium">
                             {r.id} ({r.capability} @ {Math.round(r.position.x)},{Math.round(r.position.y)})
                           </span>
                         ))}
@@ -313,7 +313,7 @@ export default function ImportDataModal({ isOpen, onClose }: ImportDataModalProp
                       <span className="text-slate-500 font-semibold uppercase text-[10px]">Task Samples:</span>
                       <div className="flex flex-wrap gap-1.5">
                         {importResult.tasks.slice(0, 4).map(t => (
-                          <span key={t.id} className="px-2 py-0.5 rounded bg-slate-800 text-emerald-300 font-mono text-[10px] border border-slate-700">
+                          <span key={t.id} className="px-2 py-0.5 rounded bg-white text-slate-900 font-mono text-[10px] border border-slate-300 font-medium">
                             {t.id}: {t.name} [{t.priority}]
                           </span>
                         ))}
@@ -332,17 +332,17 @@ export default function ImportDataModal({ isOpen, onClose }: ImportDataModalProp
         </div>
 
         {/* Modal Footer */}
-        <div className="flex items-center justify-between p-4 border-t border-slate-800 bg-slate-950/70">
+        <div className="flex items-center justify-between p-4 border-t border-slate-200 bg-slate-50">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-lg transition-colors"
+            className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg border border-slate-300 transition-colors shadow-2xs"
           >
             Cancel
           </button>
           <button
             onClick={handleApply}
             disabled={!importResult || (importResult.robots.length === 0 && importResult.tasks.length === 0)}
-            className="flex items-center gap-1.5 px-5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 disabled:cursor-not-allowed text-white text-xs font-bold rounded-lg transition-all shadow-md shadow-emerald-900/30"
+            className="flex items-center gap-1.5 px-5 py-2 bg-black hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed text-white text-xs font-bold rounded-lg transition-all shadow-xs"
           >
             <span>Load into Command Center</span>
             <ArrowRight className="w-4 h-4" />
