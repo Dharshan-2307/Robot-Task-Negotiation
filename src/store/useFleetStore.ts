@@ -44,6 +44,7 @@ interface FleetStore {
 
   // --- Actions ---
   initializeSimulation: (robotCount?: number) => void;
+  setRobotCount: (robotCount: number) => void;
   startSimulation: () => void;
   pauseSimulation: () => void;
   resumeSimulation: () => void;
@@ -85,6 +86,20 @@ const emptyAnalytics: FleetAnalytics = {
   emergencyRobotsCount: 0, relayRobotsCount: 0, generalRobotsCount: 0,
 };
 
+const getStoredRobotCount = (): number => {
+  if (typeof window !== 'undefined') {
+    try {
+      const saved = parseInt(localStorage.getItem('agriswarm_robot_count') || '', 10);
+      if (!isNaN(saved) && saved >= 1 && saved <= 1000) {
+        return saved;
+      }
+    } catch {
+      // ignore
+    }
+  }
+  return 500;
+};
+
 export const useFleetStore = create<FleetStore>((set, get) => ({
   connectionStatus: 'simulated',
 
@@ -113,18 +128,40 @@ export const useFleetStore = create<FleetStore>((set, get) => ({
 
   engine: null,
 
-  initializeSimulation: (robotCount = 500) => {
+  initializeSimulation: (robotCount?: number) => {
     const existingEngine = get().engine;
     if (existingEngine) existingEngine.destroy();
+
+    const effectiveCount = robotCount !== undefined && robotCount >= 1
+      ? robotCount
+      : getStoredRobotCount();
 
     const engine = new SimulationEngine(() => {
       get().syncFromEngine();
     });
-    engine.config.robotCount = robotCount;
-    engine.initialize(robotCount);
+    engine.config.robotCount = effectiveCount;
+    engine.initialize(effectiveCount);
 
     set({ engine, connectionStatus: 'simulated' });
     get().syncFromEngine();
+  },
+
+  setRobotCount: (robotCount: number) => {
+    const validCount = Math.max(1, Math.min(1000, Math.floor(robotCount)));
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('agriswarm_robot_count', String(validCount));
+      } catch {
+        // ignore
+      }
+    }
+    const { engine } = get();
+    if (engine) {
+      engine.setRobotCount(validCount);
+      get().syncFromEngine();
+    } else {
+      get().initializeSimulation(validCount);
+    }
   },
 
   startSimulation: () => {
