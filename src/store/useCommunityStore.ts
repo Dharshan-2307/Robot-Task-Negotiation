@@ -133,22 +133,72 @@ export const COMMUNITY_BUILDINGS: CommunityBuilding[] = [
   },
 ];
 
-// Initial Service Robots (1 default autonomous multi-service unit for gated community)
-const INITIAL_COMMUNITY_ROBOTS: CommunityRobot[] = [
-  {
-    id: 'UNIT-01',
-    name: 'OmniBot Pioneer',
-    role: 'parcel_delivery',
-    state: 'idle',
-    position: { x: 910, y: 150 },
-    route: [],
-    battery: 98,
-    health: 100,
-    assignedZone: 'Main Gate Hub & Precinct',
-    speed: 3.2,
-    alerts: [],
-  },
+const COMMUNITY_ROBOT_TEMPLATES = [
+  { role: 'parcel_delivery', name: 'OmniBot Pioneer', zone: 'Main Gate Hub & Precinct', x: 910, y: 150, speed: 3.2 },
+  { role: 'sanitation_sweeper', name: 'SanitaBot EcoClean', zone: 'Central Courtyard & Lawn', x: 250, y: 620, speed: 1.8 },
+  { role: 'security_patrol', name: 'SentryBot Vanguard', zone: 'Perimeter Fire Corridor', x: 600, y: 500, speed: 2.4 },
+  { role: 'plumbing_maintenance', name: 'HydroFix SumpManifold', zone: 'Basement 2 Hydro Pumps', x: 980, y: 390, speed: 2.0 },
+  { role: 'electrical_repair', name: 'VoltCare Supercharge', zone: 'EV Supercharger Plaza', x: 740, y: 400, speed: 2.2 },
+  { role: 'parcel_delivery', name: 'CourierBot Express', zone: 'Tower B & C Courier Staging', x: 440, y: 160, speed: 3.0 },
+  { role: 'security_patrol', name: 'SentryBot Nightwatch', zone: 'Clubhouse & Gate 2', x: 920, y: 460, speed: 2.4 },
+  { role: 'sanitation_sweeper', name: 'SanitaBot Compactor', zone: 'Recycling & Waste Hub', x: 960, y: 620, speed: 1.8 },
+  { role: 'plumbing_maintenance', name: 'HydroFix RiserLine', zone: 'Towers A-D Water Risers', x: 180, y: 400, speed: 2.0 },
+  { role: 'electrical_repair', name: 'VoltCare SolarGrid', zone: 'Rooftop & Substation Bay', x: 960, y: 360, speed: 2.2 },
+  { role: 'parcel_delivery', name: 'CourierBot Rapid', zone: 'Tower A Door Service', x: 180, y: 260, speed: 3.0 },
+  { role: 'elevator_liaison', name: 'ElevatorTransit Alpha', zone: 'Tower A Ground Lobby', x: 180, y: 160, speed: 2.5 },
+  { role: 'elevator_liaison', name: 'ElevatorTransit Beta', zone: 'Tower B Ground Lobby', x: 440, y: 160, speed: 2.5 },
+  { role: 'parcel_delivery', name: 'CourierBot Delta', zone: 'Tower D Door Service', x: 340, y: 320, speed: 3.0 },
+  { role: 'sanitation_sweeper', name: 'SanitaBot LawnCare', zone: 'Amphitheater Plaza', x: 480, y: 620, speed: 1.8 },
+  { role: 'security_patrol', name: 'SentryBot PerimeterSouth', zone: 'South Fence Line', x: 300, y: 700, speed: 2.4 },
+  { role: 'electrical_repair', name: 'VoltCare DGUtility', zone: 'Emergency DG Shed', x: 930, y: 320, speed: 2.2 },
+  { role: 'plumbing_maintenance', name: 'HydroFix TankAlpha', zone: 'Hydro Pneumatic Header', x: 1020, y: 410, speed: 2.0 },
+  { role: 'parcel_delivery', name: 'CourierBot Falcon', zone: 'Clubhouse Banquet Service', x: 620, y: 160, speed: 3.0 },
+  { role: 'security_patrol', name: 'SentryBot GateOne', zone: 'Main ANPR Entry Boom', x: 930, y: 100, speed: 2.4 },
 ];
+
+function createCommunityRobot(index: number): CommunityRobot {
+  const t = COMMUNITY_ROBOT_TEMPLATES[index % COMMUNITY_ROBOT_TEMPLATES.length];
+  const cycle = Math.floor(index / COMMUNITY_ROBOT_TEMPLATES.length);
+  const id = `UNIT-${String(index + 1).padStart(2, '0')}`;
+  const name = cycle === 0 ? t.name : `${t.name} #${cycle + 1}`;
+
+  return {
+    id,
+    name,
+    role: t.role as any,
+    state: 'idle',
+    position: { x: t.x + (index % 4) * 8, y: t.y + (index % 3) * 8 },
+    route: [],
+    battery: Math.floor(82 + (index * 7) % 18),
+    health: 100,
+    assignedZone: t.zone,
+    speed: t.speed,
+    alerts: [],
+  };
+}
+
+const getStoredCommunityRobotCount = (): number => {
+  if (typeof window !== 'undefined') {
+    try {
+      const saved = parseInt(localStorage.getItem('urbancommunity_robot_count') || '', 10);
+      if (!isNaN(saved) && saved >= 1 && saved <= 20) {
+        return saved;
+      }
+    } catch {
+      // ignore
+    }
+  }
+  return 1;
+};
+
+const getInitialCommunityRobots = (): CommunityRobot[] => {
+  const count = getStoredCommunityRobotCount();
+  const list: CommunityRobot[] = [];
+  for (let i = 0; i < count; i++) {
+    list.push(createCommunityRobot(i));
+  }
+  return list;
+};
 
 // Initial Issues / Resident Tickets
 const INITIAL_COMMUNITY_ISSUES: CommunityIssue[] = [
@@ -182,6 +232,7 @@ interface CommunityStore {
   setActiveView: (view: 'map' | 'tickets' | 'facility' | 'fleet') => void;
   selectRobot: (id: string | null) => void;
   selectBuilding: (id: string | null) => void;
+  setRobotCount: (count: number) => void;
   toggleSimulation: () => void;
   setSimSpeed: (speed: number) => void;
   triggerCommunityIssue: (category: IssueCategory) => void;
@@ -210,7 +261,7 @@ export const useCommunityStore = create<CommunityStore>((set, get) => {
   }
 
   return {
-    robots: INITIAL_COMMUNITY_ROBOTS,
+    robots: getInitialCommunityRobots(),
     buildings: COMMUNITY_BUILDINGS,
     issues: INITIAL_COMMUNITY_ISSUES,
     events: [
@@ -218,15 +269,8 @@ export const useCommunityStore = create<CommunityStore>((set, get) => {
         id: 'evt-1',
         timestamp: 1727280000000,
         type: 'delivery',
-        message: 'DELIV-01 picked up medical parcel from Main Gate Hub for Tower B-902.',
-        robotId: 'DELIV-01',
-      },
-      {
-        id: 'evt-2',
-        timestamp: 1727279880000,
-        type: 'maintenance',
-        message: 'PLUMB-01 deployed to Pump House for acoustic flange inspection.',
-        robotId: 'PLUMB-01',
+        message: 'OmniBot Pioneer initialized. Autonomous service fleet active on community precinct grid.',
+        robotId: 'UNIT-01',
       },
     ],
     selectedRobotId: null,
@@ -238,6 +282,44 @@ export const useCommunityStore = create<CommunityStore>((set, get) => {
     setActiveView: (view) => set({ activeView: view }),
     selectRobot: (id) => set({ selectedRobotId: id }),
     selectBuilding: (id) => set({ selectedBuildingId: id }),
+
+    setRobotCount: (count: number) => {
+      const targetCount = Math.max(1, Math.min(20, Math.floor(count)));
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('urbancommunity_robot_count', String(targetCount));
+        } catch {
+          // ignore
+        }
+      }
+
+      set(s => {
+        let updatedRobots: CommunityRobot[];
+        if (targetCount > s.robots.length) {
+          const additional: CommunityRobot[] = [];
+          for (let i = s.robots.length; i < targetCount; i++) {
+            additional.push(createCommunityRobot(i));
+          }
+          updatedRobots = [...s.robots, ...additional];
+        } else {
+          updatedRobots = s.robots.slice(0, targetCount);
+        }
+
+        return {
+          robots: updatedRobots,
+          selectedRobotId: updatedRobots.some(r => r.id === s.selectedRobotId) ? s.selectedRobotId : null,
+          events: [
+            {
+              id: `evt-${Date.now()}`,
+              timestamp: Date.now(),
+              type: 'maintenance',
+              message: `Facility swarm size adjusted to ${targetCount} unit${targetCount > 1 ? 's' : ''}.`,
+            },
+            ...s.events.slice(0, 40),
+          ],
+        };
+      });
+    },
 
     toggleSimulation: () => set(s => ({ isSimRunning: !s.isSimRunning })),
     setSimSpeed: (speed) => set({ simSpeed: speed }),
