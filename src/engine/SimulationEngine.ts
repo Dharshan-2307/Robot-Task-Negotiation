@@ -166,7 +166,7 @@ export const DEFAULT_FARM_MAP: MapConfig = {
 };
 
 // --- Dynamic AgriSwarm Quotas (Supports 1 to 1000+ robots) ---
-function getRobotCapabilityForIndex(i: number, totalCount: number = 500): RobotCapability {
+function getRobotCapabilityForIndex(i: number, totalCount: number = 10): RobotCapability {
   if (totalCount <= 12) {
     const caps: RobotCapability[] = [
       'water_inspection',
@@ -202,7 +202,7 @@ export class SimulationEngine {
   config: SimulationConfig = {
     state: 'stopped',
     speed: 1,
-    robotCount: 500,
+    robotCount: 10,
     taskGenerationRate: 10,
     isControllerOnline: true, // Step 20 Central Coordinator
     commRangeUnits: 100,      // Step 11 P2P radio radius
@@ -221,7 +221,7 @@ export class SimulationEngine {
 
   // --- Initialization ---
 
-  initialize(robotCount: number = 500) {
+  initialize(robotCount: number = 10) {
     _idCounter = 0;
     this.robots.clear();
     this.tasks.clear();
