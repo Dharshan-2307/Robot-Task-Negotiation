@@ -215,7 +215,8 @@ export type EventType =
   | 'task-migrated'
   | 'controller-offline'
   | 'controller-online'
-  | 'comm-blackout';
+  | 'comm-blackout'
+  | 'fleet-scaled';
 
 export interface LiveEvent {
   id: string;
@@ -318,7 +319,7 @@ export interface MapObstacle {
   w: number;
   h: number;
   label?: string;
-  type?: 'shed' | 'tank' | 'substation' | 'restricted';
+  type?: 'shed' | 'tank' | 'substation' | 'restricted' | 'pump';
 }
 
 export interface MapConfig {
