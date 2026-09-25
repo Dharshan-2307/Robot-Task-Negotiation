@@ -5,7 +5,6 @@
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
-import Link from 'next/link';
 import { useFleetStore } from '@/store/useFleetStore';
 import { globalTransport } from '@/lib/transport';
 import FleetMap from '@/components/FleetMap';
@@ -111,23 +110,6 @@ export default function MissionControl() {
               Decentralized Multi-Robot Farm Utility Monitoring & Autonomous Emergency Response System
             </p>
           </div>
-        </div>
-
-        {/* Environment Switcher: Poultry Farm vs Gated Community (Completely Isolated) */}
-        <div className="hidden md:flex items-center border border-slate-300 p-0.5 rounded-lg bg-slate-100">
-          <div className="px-2.5 py-1 text-xs font-bold bg-black text-white rounded-md flex items-center gap-1.5 shadow-xs">
-            <span>🐔</span>
-            <span>Poultry Farm</span>
-          </div>
-          <Link
-            href="/community"
-            className="px-2.5 py-1 text-xs font-bold text-slate-600 hover:text-black hover:bg-white rounded-md transition-all flex items-center gap-1.5"
-            title="Switch to Isolated Gated Community Multi-Robot Engine"
-          >
-            <span>🏢</span>
-            <span>Gated Community</span>
-            <span className="text-[9px] bg-slate-200 px-1 py-0.2 rounded font-mono text-black font-bold">ISOLATED</span>
-          </Link>
         </div>
 
         {/* Center Navigation Tabs — 3 Pillars + Categorized 'More Modules' Dropdown */}
@@ -383,13 +365,6 @@ export default function MissionControl() {
               {tab.label}
             </button>
           ))}
-          <Link
-            href="/community"
-            className="px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap bg-white text-black border border-slate-300 flex items-center gap-1 shadow-xs hover:bg-slate-200"
-          >
-            <span>🏢</span>
-            <span>Gated Community</span>
-          </Link>
         </div>
 
         {/* Workspace Grid */}
