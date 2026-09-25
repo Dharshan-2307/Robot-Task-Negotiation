@@ -34,16 +34,18 @@ function clamp(v: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, v));
 }
 
-// --- AgriSwarm Poultry Farm Obstacles (Sheds 1-6, Tanks, Substations) ---
+// --- AgriSwarm Poultry Farm Obstacles (4 Sheds, 2 Pump Stations, Tanks, Substations) ---
 
 export const POULTRY_FARM_OBSTACLES: MapObstacle[] = [
-  // 6 Poultry Sheds
+  // 4 Poultry Sheds
   { x: 120, y: 100, w: 220, h: 90, label: 'POULTRY SHED 1', type: 'shed' },
   { x: 420, y: 100, w: 220, h: 90, label: 'POULTRY SHED 2', type: 'shed' },
   { x: 720, y: 100, w: 220, h: 90, label: 'POULTRY SHED 3', type: 'shed' },
   { x: 120, y: 320, w: 220, h: 90, label: 'POULTRY SHED 4', type: 'shed' },
-  { x: 420, y: 320, w: 220, h: 90, label: 'POULTRY SHED 5', type: 'shed' },
-  { x: 720, y: 320, w: 220, h: 90, label: 'POULTRY SHED 6', type: 'shed' },
+
+  // Water Pumps & Distribution replacing former sheds 5 & 6
+  { x: 420, y: 320, w: 220, h: 90, label: 'MAIN WATER PUMP STATION', type: 'pump' },
+  { x: 720, y: 320, w: 220, h: 90, label: 'DOSING & BOOSTER PUMP HUB', type: 'pump' },
 
   // Farm Utilities
   { x: 1000, y: 100, w: 140, h: 120, label: 'WATER TANK ALPHA', type: 'tank' },
@@ -53,7 +55,7 @@ export const POULTRY_FARM_OBSTACLES: MapObstacle[] = [
   { x: 120, y: 550, w: 200, h: 100, label: 'MAINTENANCE & WORKSHOP', type: 'restricted' },
 ];
 
-// --- 12 Poultry Nipple-Line Pipe Sections (Step 27) ---
+// --- 12 Poultry Nipple-Line & Pump Station Pipe Sections ---
 
 export const DEFAULT_WATER_PIPES: WaterPipeSection[] = [
   { id: 'PIPE-01', name: 'Nipple Line 1A', shed: 'Shed 1', location: { x: 180, y: 155 }, status: 'normal', flowRate: 42.0, pressure: 2.4 },
@@ -64,10 +66,10 @@ export const DEFAULT_WATER_PIPES: WaterPipeSection[] = [
   { id: 'PIPE-06', name: 'Nipple Line 3B', shed: 'Shed 3', location: { x: 870, y: 155 }, status: 'normal', flowRate: 39.8, pressure: 2.2 },
   { id: 'PIPE-07', name: 'Nipple Line 4A', shed: 'Shed 4', location: { x: 180, y: 375 }, status: 'normal', flowRate: 42.8, pressure: 2.4 },
   { id: 'PIPE-08', name: 'Nipple Line 4B', shed: 'Shed 4', location: { x: 270, y: 375 }, status: 'normal', flowRate: 41.5, pressure: 2.3 },
-  { id: 'PIPE-09', name: 'Nipple Line 5A', shed: 'Shed 5', location: { x: 500, y: 380 }, status: 'normal', flowRate: 45.0, pressure: 2.5 },
-  { id: 'PIPE-10', name: 'Nipple Line 5B', shed: 'Shed 5', location: { x: 560, y: 380 }, status: 'normal', flowRate: 43.5, pressure: 2.4 },
-  { id: 'PIPE-11', name: 'Nipple Line 6A', shed: 'Shed 6', location: { x: 780, y: 375 }, status: 'normal', flowRate: 40.0, pressure: 2.3 },
-  { id: 'PIPE-12', name: 'Nipple Line 6B', shed: 'Shed 6', location: { x: 870, y: 375 }, status: 'normal', flowRate: 38.5, pressure: 2.1 },
+  { id: 'PIPE-09', name: 'Main Intake Line', shed: 'Pump Station 1', location: { x: 500, y: 380 }, status: 'normal', flowRate: 52.0, pressure: 3.4 },
+  { id: 'PIPE-10', name: 'Return Circulation', shed: 'Pump Station 1', location: { x: 560, y: 380 }, status: 'normal', flowRate: 49.5, pressure: 3.2 },
+  { id: 'PIPE-11', name: 'Booster Injection', shed: 'Pump Station 2', location: { x: 780, y: 375 }, status: 'normal', flowRate: 46.0, pressure: 2.9 },
+  { id: 'PIPE-12', name: 'Dosing Manifold', shed: 'Pump Station 2', location: { x: 870, y: 375 }, status: 'normal', flowRate: 44.5, pressure: 2.8 },
 ];
 
 // --- Distributed Sensor Units ---
@@ -103,17 +105,17 @@ export const DEFAULT_FARM_SENSORS: SensorUnit[] = [
   },
   {
     id: 'S-LEAK-TRENCH',
-    name: 'Shed 5 Moisture Sensor',
+    name: 'Pump Station Sump Sensor',
     type: 'water-leak',
     location: { x: 450, y: 365 },
-    zone: 'Poultry Shed 5 - Manure Trench',
+    zone: 'Pump Station 1 - Drain Sump',
     currentValue: 14.0,
     unit: '% RH',
     nominalRange: [10, 45],
     criticalThreshold: 80,
     status: 'nominal',
     lastReadingTime: Date.now(),
-    description: 'Under-slat water leakage & nipple drip sensor',
+    description: 'Under-slat water leakage & pump sump sensor',
   },
   {
     id: 'S-PZEM-SUB1',
@@ -163,14 +165,25 @@ export const DEFAULT_FARM_MAP: MapConfig = {
   waterPipes: [...DEFAULT_WATER_PIPES],
 };
 
-// --- Exact 500-Robot AgriSwarm Quotas (Step 0) ---
-// 150 Water Inspection, 100 Electrical, 100 Transport, 75 Emergency, 50 Relay, 25 General = 500
-function getRobotCapabilityForIndex(i: number): RobotCapability {
-  if (i < 150) return 'water_inspection';
-  if (i < 250) return 'electrical_inspection';
-  if (i < 350) return 'utility_transport';
-  if (i < 425) return 'emergency_response';
-  if (i < 475) return 'communication_relay';
+// --- Dynamic AgriSwarm Quotas (Supports 1 to 1000+ robots) ---
+function getRobotCapabilityForIndex(i: number, totalCount: number = 500): RobotCapability {
+  if (totalCount <= 12) {
+    const caps: RobotCapability[] = [
+      'water_inspection',
+      'electrical_inspection',
+      'utility_transport',
+      'emergency_response',
+      'communication_relay',
+      'general_purpose',
+    ];
+    return caps[i % caps.length];
+  }
+  const ratio = i / totalCount;
+  if (ratio < 0.30) return 'water_inspection';
+  if (ratio < 0.50) return 'electrical_inspection';
+  if (ratio < 0.70) return 'utility_transport';
+  if (ratio < 0.85) return 'emergency_response';
+  if (ratio < 0.95) return 'communication_relay';
   return 'general_purpose';
 }
 
@@ -234,28 +247,32 @@ export class SimulationEngine {
     DEFAULT_WATER_PIPES.forEach(p => this.waterPipes.set(p.id, { ...p }));
     this.map.waterPipes = [...this.waterPipes.values()];
 
-    // Spawn 500 Robots with Exact AgriSwarm Quotas
+    // Spawn Robots with Dynamic AgriSwarm Quotas
     for (let i = 0; i < robotCount; i++) {
-      const robot = this.createRobot(i);
+      const robot = this.createRobot(i, robotCount);
       this.robots.set(robot.id, robot);
     }
 
-    // Ensure R-0042 and R-0067 have emergency_response capability for Hero Demo
-    const r42 = this.robots.get('R-0042');
+    // Ensure primary and secondary emergency response robots are ready for Hero Demo
+    const r42 = this.robots.get('R-0042') || this.robots.get('R-0001');
     if (r42) {
       r42.capability = 'emergency_response';
       r42.battery = 94;
       r42.position = { x: 380, y: 230 };
     }
-    const r67 = this.robots.get('R-0067');
-    if (r67) {
+    const r67 = this.robots.get('R-0067') || this.robots.get('R-0002');
+    if (r67 && r67 !== r42) {
       r67.capability = 'emergency_response';
       r67.battery = 89;
       r67.position = { x: 490, y: 350 };
     }
 
-    // Initial farm tasks
-    for (let i = 0; i < Math.min(Math.floor(robotCount * 0.3), 150); i++) {
+    // Initial farm tasks (ensure enough tasks exist for small fleets like 5 to actively work)
+    const initialTasks = robotCount <= 12
+      ? Math.max(robotCount, 4)
+      : Math.min(Math.floor(robotCount * 0.3), 150);
+
+    for (let i = 0; i < initialTasks; i++) {
       const task = this.createFarmTask();
       this.tasks.set(task.id, task);
     }
@@ -264,10 +281,87 @@ export class SimulationEngine {
     this.computeAnalytics();
   }
 
-  private createRobot(index: number): Robot {
+  setRobotCount(count: number) {
+    const targetCount = Math.max(1, Math.min(1000, Math.floor(count)));
+    this.config.robotCount = targetCount;
+
+    const currentRobots = Array.from(this.robots.values());
+    const currentCount = currentRobots.length;
+
+    if (targetCount === currentCount) {
+      this.notify();
+      return;
+    }
+
+    if (targetCount < currentCount) {
+      // Retain first `targetCount` robots, unassign and remove the rest
+      const toRemove = currentRobots.slice(targetCount);
+      for (const r of toRemove) {
+        if (r.currentTaskId) {
+          const task = this.tasks.get(r.currentTaskId);
+          if (task && task.status === 'in-progress') {
+            task.status = 'pending';
+            task.assignedRobotId = undefined;
+          }
+        }
+        this.robots.delete(r.id);
+      }
+    } else {
+      // Add new robots
+      for (let i = currentCount; i < targetCount; i++) {
+        const robot = this.createRobot(i, targetCount);
+        this.robots.set(robot.id, robot);
+      }
+    }
+
+    // If small fleet (e.g. 5 robots), guarantee all capabilities are balanced
+    if (targetCount <= 12) {
+      const caps: RobotCapability[] = [
+        'water_inspection',
+        'electrical_inspection',
+        'utility_transport',
+        'emergency_response',
+        'communication_relay',
+        'general_purpose',
+      ];
+      let idx = 0;
+      for (const r of this.robots.values()) {
+        r.capability = caps[idx % caps.length];
+        r.isMeshRelay = r.capability === 'communication_relay';
+        if (r.battery < 30) r.battery = rand(70, 95);
+        idx++;
+      }
+    }
+
+    // Ensure enough tasks exist for the fleet to actively work
+    const activeTasks = [...this.tasks.values()].filter(
+      t => t.status === 'pending' || t.status === 'in-progress' || t.status === 'assigned'
+    ).length;
+    const targetTasks = Math.max(targetCount, 4);
+    if (activeTasks < targetTasks) {
+      const diff = targetTasks - activeTasks;
+      for (let i = 0; i < diff; i++) {
+        const task = this.createFarmTask();
+        this.tasks.set(task.id, task);
+      }
+    }
+
+    this.assignPendingTasks();
+    this.computeAnalytics();
+    this.pushEvent(
+      'fleet-scaled',
+      `Fleet dynamically scaled to ${targetCount} robots. Tasks rebalanced across farm.`,
+      'info'
+    );
+    this.notify();
+  }
+
+  private createRobot(index: number, totalCount: number = this.config.robotCount): Robot {
     const id = `R-${String(index + 1).padStart(4, '0')}`;
-    const capability = getRobotCapabilityForIndex(index);
-    const state: RobotState = Math.random() < 0.75 ? 'idle' : (Math.random() < 0.5 ? 'charging' : 'idle');
+    const capability = getRobotCapabilityForIndex(index, totalCount);
+    const state: RobotState = totalCount <= 10
+      ? 'idle'
+      : (Math.random() < 0.75 ? 'idle' : (Math.random() < 0.5 ? 'charging' : 'idle'));
     const pos: Position = {
       x: rand(30, this.map.width - 30),
       y: rand(30, this.map.height - 30),
@@ -277,7 +371,7 @@ export class SimulationEngine {
       name: `AgriBot ${index + 1} (${capability.replace('_', ' ')})`,
       position: { ...pos },
       state,
-      battery: state === 'charging' ? rand(5, 30) : rand(50, 100),
+      battery: totalCount <= 10 ? rand(80, 100) : (state === 'charging' ? rand(5, 30) : rand(50, 100)),
       health: rand(85, 100),
       capability,
       route: [],
@@ -630,25 +724,25 @@ export class SimulationEngine {
     if (this.config.state !== 'running') this.start();
 
     const sensor = this.sensors.get('S-W1209-SHED2') || [...this.sensors.values()][0];
-    const r42 = this.robots.get('R-0042') || this.createRobot(41);
-    r42.id = 'R-0042';
+    const robotList = Array.from(this.robots.values());
+    const r42 = this.robots.get('R-0042') || robotList[0];
+    const r67 = this.robots.get('R-0067') || (robotList.length > 1 ? robotList[1] : robotList[0]);
+    const pId = r42.id;
+    const bId = r67.id;
+
     r42.capability = 'emergency_response';
     r42.battery = 94;
     r42.health = 100;
     r42.state = 'idle';
     r42.position = { x: 380, y: 230 };
     r42.route = [];
-    this.robots.set(r42.id, r42);
 
-    const r67 = this.robots.get('R-0067') || this.createRobot(66);
-    r67.id = 'R-0067';
     r67.capability = 'emergency_response';
     r67.battery = 89;
     r67.health = 100;
     r67.state = 'idle';
     r67.position = { x: 490, y: 350 };
     r67.route = [];
-    this.robots.set(r67.id, r67);
 
     let faultId = '';
     let taskId = '';
@@ -661,8 +755,8 @@ export class SimulationEngine {
       totalSteps: 7,
       title: 'Sensor Alert: W1209 Overheating in Shed 2',
       description: 'Distributed W1209 temperature controller detects critical 44.5°C spike in Poultry Shed 2 brooder section.',
-      primaryRobotId: 'R-0042',
-      backupRobotId: 'R-0067',
+      primaryRobotId: pId,
+      backupRobotId: bId,
       sensorId: sensor.id,
       startedAt: Date.now(),
     };
@@ -722,7 +816,7 @@ export class SimulationEngine {
     }, 2500);
     this.heroTimeoutIds.push(t2);
 
-    // STEP 3 (5s): Peer-to-Peer Negotiation → R-0042 wins contract
+    // STEP 3 (5s): Peer-to-Peer Negotiation → primary robot wins contract
     const t3 = setTimeout(() => {
       const task = this.tasks.get(taskId);
       const fault = this.faults.get(faultId);
@@ -730,11 +824,11 @@ export class SimulationEngine {
 
       const neg: NegotiationEvent = {
         id: uid('NEG-HERO'),
-        robotIds: ['R-0042', 'R-0067', 'R-0012'],
+        robotIds: [pId, bId],
         reason: 'task-conflict',
         status: 'resolved',
-        description: 'Autonomous Contract-Net negotiation: R-0042 bid highest utility based on proximity (180m) and battery (94%).',
-        result: 'Contract awarded to R-0042',
+        description: `Autonomous Contract-Net negotiation: ${pId} bid highest utility based on proximity (180m) and battery (94%).`,
+        result: `Contract awarded to ${pId}`,
         startedAt: Date.now(),
         resolvedAt: Date.now(),
         relatedTaskIds: [taskId],
@@ -742,9 +836,9 @@ export class SimulationEngine {
       this.negotiations.set(neg.id, neg);
 
       task.status = 'in-progress';
-      task.assignedRobotId = 'R-0042';
+      task.assignedRobotId = pId;
       fault.status = 'in-response';
-      fault.assignedRobotId = 'R-0042';
+      fault.assignedRobotId = pId;
 
       r42.currentTaskId = taskId;
       r42.targetPosition = { ...sensor.location };
@@ -758,10 +852,10 @@ export class SimulationEngine {
       if (this.heroDemoState) {
         this.heroDemoState.currentStep = 'robot-assigned';
         this.heroDemoState.stepNumber = 3;
-        this.heroDemoState.title = 'P2P Negotiation: R-0042 Deployed';
-        this.heroDemoState.description = 'Eligible farm agents evaluated costs. R-0042 won mission and dispatched to Shed 2.';
+        this.heroDemoState.title = `P2P Negotiation: ${pId} Deployed`;
+        this.heroDemoState.description = `Eligible farm agents evaluated costs. ${pId} won mission and dispatched to Shed 2.`;
       }
-      this.pushEvent('negotiation-completed', `Negotiation resolved: R-0042 assigned to mission`, 'info', ['R-0042'], taskId);
+      this.pushEvent('negotiation-completed', `Negotiation resolved: ${pId} assigned to mission`, 'info', [pId], taskId);
       this.notify();
     }, 5000);
     this.heroTimeoutIds.push(t3);
@@ -770,10 +864,10 @@ export class SimulationEngine {
     const t4 = setTimeout(() => {
       const conflict: ConflictEvent = {
         id: uid('CF-HERO'),
-        robotIds: ['R-0042', 'R-0018'],
+        robotIds: [pId, bId],
         position: { x: 450, y: 190 },
         status: 'rerouting',
-        description: 'Shed corridor bottleneck detected. R-0042 yielded right-of-way and dynamically recalculated detour.',
+        description: `Shed corridor bottleneck detected. ${pId} yielded right-of-way and dynamically recalculated detour.`,
         detectedAt: Date.now(),
         rerouteTriggered: true,
       };
@@ -790,9 +884,9 @@ export class SimulationEngine {
         this.heroDemoState.currentStep = 'conflict-reroute';
         this.heroDemoState.stepNumber = 4;
         this.heroDemoState.title = 'Spatial Conflict Avoidance & Reroute';
-        this.heroDemoState.description = 'R-0042 encountered utility robot in corridor. Dynamic obstacle rerouting applied (+1.1s).';
+        this.heroDemoState.description = `${pId} encountered utility robot in corridor. Dynamic obstacle rerouting applied (+1.1s).`;
       }
-      this.pushEvent('robot-rerouted', `R-0042 rerouted around corridor bottleneck`, 'warning', ['R-0042']);
+      this.pushEvent('robot-rerouted', `${pId} rerouted around corridor bottleneck`, 'warning', [pId]);
       this.notify();
     }, 9000);
     this.heroTimeoutIds.push(t4);
@@ -807,26 +901,26 @@ export class SimulationEngine {
       if (this.heroDemoState) {
         this.heroDemoState.currentStep = 'robot-failure';
         this.heroDemoState.stepNumber = 5;
-        this.heroDemoState.title = '⚠️ Robot Hardware Failure (R-0042 Down)';
-        this.heroDemoState.description = 'R-0042 suffered critical drive motor failure at waypoint. Unit immobilized in corridor.';
+        this.heroDemoState.title = `⚠️ Robot Hardware Failure (${pId} Down)`;
+        this.heroDemoState.description = `${pId} suffered critical drive motor failure at waypoint. Unit immobilized in corridor.`;
       }
-      this.pushAlert('critical', 'failure', 'R-0042 motor drive offline! Task at risk of abandonment');
-      this.pushEvent('robot-failure', `R-0042 catastrophic failure! Autonomous failover triggered`, 'critical', ['R-0042'], taskId);
+      this.pushAlert('critical', 'failure', `${pId} motor drive offline! Task at risk of abandonment`);
+      this.pushEvent('robot-failure', `${pId} catastrophic failure! Autonomous failover triggered`, 'critical', [pId], taskId);
       this.notify();
     }, 13000);
     this.heroTimeoutIds.push(t5);
 
-    // STEP 6 (15.5s): Automatic Task Migration to R-0067 ("The mission didn't.")
+    // STEP 6 (15.5s): Automatic Task Migration to backup robot ("The mission didn't.")
     const t6 = setTimeout(() => {
       const task = this.tasks.get(taskId);
       const fault = this.faults.get(faultId);
       if (!task || !fault) return;
 
       task.status = 'reassigned';
-      task.previousRobotId = 'R-0042';
-      task.assignedRobotId = 'R-0067';
+      task.previousRobotId = pId;
+      task.assignedRobotId = bId;
 
-      fault.assignedRobotId = 'R-0067';
+      fault.assignedRobotId = bId;
 
       r67.currentTaskId = taskId;
       r67.targetPosition = { ...sensor.location };
@@ -840,14 +934,14 @@ export class SimulationEngine {
       if (this.heroDemoState) {
         this.heroDemoState.currentStep = 'task-migration';
         this.heroDemoState.stepNumber = 6;
-        this.heroDemoState.title = '🔄 Autonomous Task Migration: R-0067 Takes Over';
-        this.heroDemoState.description = 'Decentralized failover: Mission seamlessly transferred to backup agent R-0067. Zero human intervention.';
+        this.heroDemoState.title = `🔄 Autonomous Task Migration: ${bId} Takes Over`;
+        this.heroDemoState.description = `Decentralized failover: Mission seamlessly transferred to backup agent ${bId}. Zero human intervention.`;
       }
       this.pushEvent(
         'task-migrated',
-        `TASK MIGRATION: Mission transferred from failed R-0042 → R-0067`,
+        `TASK MIGRATION: Mission transferred from failed ${pId} → ${bId}`,
         'warning',
-        ['R-0042', 'R-0067'],
+        [pId, bId],
         taskId
       );
       this.notify();
@@ -880,13 +974,13 @@ export class SimulationEngine {
         this.heroDemoState.currentStep = 'recovery-complete';
         this.heroDemoState.stepNumber = 7;
         this.heroDemoState.title = '🎯 Fault Resolved: "The Robot Failed. The Mission Didn\'t."';
-        this.heroDemoState.description = 'R-0067 opened ventilation damper. Shed 2 temperature restored to 28.5°C. Full mission success!';
+        this.heroDemoState.description = `${bId} opened ventilation damper. Shed 2 temperature restored to 28.5°C. Full mission success!`;
       }
       this.pushEvent(
         'fault-resolved',
-        `FAULT RESOLVED: Shed 2 cooled to 28.5°C by R-0067. Mission complete!`,
+        `FAULT RESOLVED: Shed 2 cooled to 28.5°C by ${bId}. Mission complete!`,
         'info',
-        ['R-0067'],
+        [bId],
         taskId
       );
       this.notify();
@@ -975,6 +1069,15 @@ export class SimulationEngine {
     }
 
     if (this.tickCount % 5 === 0) {
+      // Replenish tasks so fleet is continuously working and visible
+      const activeOrPendingTasks = [...this.tasks.values()].filter(
+        t => t.status === 'pending' || t.status === 'in-progress' || t.status === 'assigned'
+      ).length;
+      const minTasks = Math.max(Math.min(this.robots.size, 10), 3);
+      if (activeOrPendingTasks < minTasks) {
+        const task = this.createFarmTask();
+        this.tasks.set(task.id, task);
+      }
       this.assignPendingTasks();
     }
 
@@ -1024,7 +1127,7 @@ export class SimulationEngine {
       }
       return;
     } else if (robot.state === 'failed' || robot.state === 'deadlocked') {
-      if (this.heroDemoState?.isActive && robot.id === 'R-0042') return;
+      if (this.heroDemoState?.isActive && robot.id === (this.heroDemoState.primaryRobotId || 'R-0042')) return;
 
       if (Math.random() < 0.001 * dt) {
         robot.state = 'idle';
