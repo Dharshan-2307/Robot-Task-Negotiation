@@ -8,17 +8,19 @@ import React from 'react';
 import { useFleetStore } from '@/store/useFleetStore';
 import {
   Play, Pause, RotateCcw, Zap, AlertTriangle, Lock,
-  Gauge, SkipForward
+  Gauge, SkipForward, Bot
 } from 'lucide-react';
 
 export default function SimulationControls() {
   const config = useFleetStore(s => s.simulationConfig);
+  const robots = useFleetStore(s => s.robots);
   const connectionStatus = useFleetStore(s => s.connectionStatus);
   const startSimulation = useFleetStore(s => s.startSimulation);
   const pauseSimulation = useFleetStore(s => s.pauseSimulation);
   const resumeSimulation = useFleetStore(s => s.resumeSimulation);
   const resetSimulation = useFleetStore(s => s.resetSimulation);
   const setSimulationSpeed = useFleetStore(s => s.setSimulationSpeed);
+  const setRobotCount = useFleetStore(s => s.setRobotCount);
   const injectFailure = useFleetStore(s => s.injectFailure);
   const injectConflict = useFleetStore(s => s.injectConflict);
   const injectDeadlock = useFleetStore(s => s.injectDeadlock);
@@ -26,26 +28,26 @@ export default function SimulationControls() {
   const speeds = [0.5, 1, 2, 5, 10];
 
   return (
-    <div className="flex flex-wrap items-center gap-2 p-3 bg-slate-900/80 backdrop-blur-sm rounded-xl border border-slate-700/50">
+    <div className="flex flex-wrap items-center gap-2 p-3 bg-white rounded-xl border border-slate-200 shadow-xs text-slate-800">
       {/* Connection Status */}
-      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800/50 border border-slate-700/30 mr-2">
+      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200 mr-2">
         <div className={`w-2 h-2 rounded-full ${
-          connectionStatus === 'connected' ? 'bg-green-400 animate-pulse' :
-          connectionStatus === 'simulated' ? 'bg-cyan-400 animate-pulse' :
-          connectionStatus === 'connecting' ? 'bg-amber-400 animate-pulse' :
-          'bg-red-400'
+          connectionStatus === 'connected' ? 'bg-emerald-500 animate-pulse' :
+          connectionStatus === 'simulated' ? 'bg-slate-900 animate-pulse' :
+          connectionStatus === 'connecting' ? 'bg-amber-500 animate-pulse' :
+          'bg-red-500'
         }`} />
-        <span className="text-[10px] uppercase tracking-wider text-slate-400 font-medium">
+        <span className="text-[10px] uppercase tracking-wider text-slate-700 font-bold">
           {connectionStatus === 'simulated' ? 'SIM MODE' : connectionStatus.toUpperCase()}
         </span>
       </div>
 
       {/* Primary Controls */}
-      <div className="flex items-center gap-1 border-r border-slate-700/50 pr-3">
+      <div className="flex items-center gap-1 border-r border-slate-200 pr-3">
         {config.state === 'stopped' ? (
           <button
             onClick={startSimulation}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black hover:bg-slate-800 text-white text-xs font-semibold transition-colors"
           >
             <Play className="w-3.5 h-3.5" />
             Start
@@ -53,7 +55,7 @@ export default function SimulationControls() {
         ) : config.state === 'running' ? (
           <button
             onClick={pauseSimulation}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold transition-colors"
           >
             <Pause className="w-3.5 h-3.5" />
             Pause
@@ -61,7 +63,7 @@ export default function SimulationControls() {
         ) : (
           <button
             onClick={resumeSimulation}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black hover:bg-slate-800 text-white text-xs font-semibold transition-colors"
           >
             <SkipForward className="w-3.5 h-3.5" />
             Resume
@@ -69,7 +71,7 @@ export default function SimulationControls() {
         )}
         <button
           onClick={resetSimulation}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-semibold transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 text-xs font-semibold transition-colors"
         >
           <RotateCcw className="w-3.5 h-3.5" />
           Reset
@@ -77,17 +79,17 @@ export default function SimulationControls() {
       </div>
 
       {/* Speed Control */}
-      <div className="flex items-center gap-1 border-r border-slate-700/50 pr-3">
-        <Gauge className="w-3.5 h-3.5 text-slate-500" />
-        <span className="text-[10px] text-slate-500 mr-1">SPEED</span>
+      <div className="flex items-center gap-1 border-r border-slate-200 pr-3">
+        <Gauge className="w-3.5 h-3.5 text-slate-400" />
+        <span className="text-[10px] text-slate-500 mr-1 font-bold">SPEED</span>
         {speeds.map(s => (
           <button
             key={s}
             onClick={() => setSimulationSpeed(s)}
             className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold transition-colors ${
               config.speed === s
-                ? 'bg-cyan-600 text-white'
-                : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-300'
+                ? 'bg-black text-white shadow-xs'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-black'
             }`}
           >
             {s}x
@@ -97,11 +99,11 @@ export default function SimulationControls() {
 
       {/* Injection Controls */}
       <div className="flex items-center gap-1">
-        <span className="text-[10px] text-slate-500 mr-1">INJECT</span>
+        <span className="text-[10px] text-slate-500 mr-1 font-bold">INJECT</span>
         <button
           onClick={injectFailure}
           disabled={config.state !== 'running'}
-          className="flex items-center gap-1 px-2 py-1 rounded-lg bg-red-900/30 hover:bg-red-900/50 border border-red-800/30 text-red-400 text-[10px] font-semibold transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-100 hover:bg-red-50 border border-slate-300 text-red-600 text-[10px] font-semibold transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
         >
           <Zap className="w-3 h-3" />
           Failure
@@ -109,7 +111,7 @@ export default function SimulationControls() {
         <button
           onClick={injectConflict}
           disabled={config.state !== 'running'}
-          className="flex items-center gap-1 px-2 py-1 rounded-lg bg-orange-900/30 hover:bg-orange-900/50 border border-orange-800/30 text-orange-400 text-[10px] font-semibold transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-100 hover:bg-amber-50 border border-slate-300 text-amber-600 text-[10px] font-semibold transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
         >
           <AlertTriangle className="w-3 h-3" />
           Conflict
@@ -117,7 +119,7 @@ export default function SimulationControls() {
         <button
           onClick={injectDeadlock}
           disabled={config.state !== 'running'}
-          className="flex items-center gap-1 px-2 py-1 rounded-lg bg-rose-900/30 hover:bg-rose-900/50 border border-rose-800/30 text-rose-400 text-[10px] font-semibold transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-100 hover:bg-rose-50 border border-slate-300 text-rose-600 text-[10px] font-semibold transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
         >
           <Lock className="w-3 h-3" />
           Deadlock
@@ -126,11 +128,7 @@ export default function SimulationControls() {
 
       {/* Simulation State Badge */}
       <div className="ml-auto">
-        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-          config.state === 'running' ? 'bg-emerald-900/40 text-emerald-400 border border-emerald-700/30' :
-          config.state === 'paused' ? 'bg-amber-900/40 text-amber-400 border border-amber-700/30' :
-          'bg-slate-800/40 text-slate-400 border border-slate-700/30'
-        }`}>
+        <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-800 border border-slate-300">
           {config.state}
         </span>
       </div>
