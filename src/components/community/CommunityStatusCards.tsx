@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 
 export const CommunityStatusCards: React.FC = () => {
-  const { robots, issues, buildings } = useCommunityStore();
+  const { robots, issues, buildings, setRobotCount } = useCommunityStore();
 
   const totalRobots = robots.length;
   const activeRobots = robots.filter(r => r.state !== 'idle' && r.state !== 'failed').length;
@@ -50,6 +50,23 @@ export const CommunityStatusCards: React.FC = () => {
           ) : (
             <span className="text-neutral-500 font-medium">0 Faults</span>
           )}
+        </div>
+        <div className="mt-2 flex items-center gap-1 pt-1.5 border-t border-neutral-200">
+          <span className="text-[10px] font-bold text-neutral-500 uppercase mr-0.5">Scale:</span>
+          {[1, 3, 5, 10, 20].map(cnt => (
+            <button
+              key={cnt}
+              onClick={() => setRobotCount(cnt)}
+              title={`Scale community fleet to ${cnt} robot${cnt > 1 ? 's' : ''}`}
+              className={`flex-1 py-0.5 text-[10px] font-mono font-bold rounded transition-colors text-center ${
+                totalRobots === cnt
+                  ? 'bg-black text-white'
+                  : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-800'
+              }`}
+            >
+              {cnt}
+            </button>
+          ))}
         </div>
       </div>
 
