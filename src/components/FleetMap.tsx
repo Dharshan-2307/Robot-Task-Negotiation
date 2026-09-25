@@ -9,29 +9,29 @@ import React, { useRef, useEffect, useCallback, useState } from 'react';
 import { useFleetStore } from '@/store/useFleetStore';
 import { Robot, Position, MapConfig } from '@/types';
 
-// --- Color Palette ---
+// --- Color Palette (Clean Black & White / Light Architecture) ---
 const COLORS = {
-  bg: '#080c14',
-  grid: '#0f1a2e',
-  gridMajor: '#152240',
-  obstacle: '#1a1f2e',
-  obstacleBorder: '#2a3050',
-  chargingStation: '#facc15',
-  taskStation: '#38bdf8',
-  robotActive: '#22d3ee',
-  robotIdle: '#f59e0b',
-  robotCharging: '#a3e635',
-  robotFailed: '#ef4444',
-  robotNegotiating: '#c084fc',
-  robotDeadlocked: '#f43f5e',
-  robotRerouting: '#fb923c',
-  robotSelected: '#ffffff',
-  route: 'rgba(34, 211, 238, 0.3)',
-  routeSelected: 'rgba(34, 211, 238, 0.7)',
-  conflictHalo: 'rgba(239, 68, 68, 0.3)',
-  negotiationBeam: 'rgba(192, 132, 252, 0.4)',
-  text: '#94a3b8',
-  textBright: '#e2e8f0',
+  bg: '#ffffff',
+  grid: '#f1f5f9',
+  gridMajor: '#e2e8f0',
+  obstacle: '#f8fafc',
+  obstacleBorder: '#0f172a',
+  chargingStation: '#eab308',
+  taskStation: '#0284c7',
+  robotActive: '#0f172a',
+  robotIdle: '#64748b',
+  robotCharging: '#16a34a',
+  robotFailed: '#dc2626',
+  robotNegotiating: '#7c3aed',
+  robotDeadlocked: '#e11d48',
+  robotRerouting: '#ea580c',
+  robotSelected: '#000000',
+  route: 'rgba(15, 23, 42, 0.15)',
+  routeSelected: 'rgba(15, 23, 42, 0.65)',
+  conflictHalo: 'rgba(220, 38, 38, 0.25)',
+  negotiationBeam: 'rgba(124, 58, 237, 0.3)',
+  text: '#475569',
+  textBright: '#0f172a',
 };
 
 function getRobotColor(state: Robot['state']): string {
@@ -86,7 +86,47 @@ export default function FleetMap() {
     return () => observer.disconnect();
   }, []);
 
-  // --- Mouse Handlers ---
+  // --- Native Non-Passive Wheel Listener (Focal Zoom on Map Only — Stops Entire Site From Zooming) ---
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const handleWheelNative = (e: WheelEvent) => {
+      // Forcibly prevent the browser from zooming the webpage or scrolling
+      e.preventDefault();
+      e.stopPropagation();
+
+      const rect = canvas.getBoundingClientRect();
+      const sx = e.clientX - rect.left;
+      const sy = e.clientY - rect.top;
+
+      const cam = cameraRef.current;
+      const oldZoom = cam.zoom;
+
+      // Smooth zoom multiplier based on scroll wheel
+      const factor = e.deltaY < 0 ? 1.15 : 0.87;
+      const newZoom = Math.max(0.15, Math.min(8, oldZoom * factor));
+
+      // Focal Zoom: Pin the exact world point under the cursor so only that part zooms
+      const w = canvasSize.w;
+      const h = canvasSize.h;
+      const wx = (sx - w / 2) / oldZoom + cam.x;
+      const wy = (sy - h / 2) / oldZoom + cam.y;
+
+      cam.x = wx - (sx - w / 2) / newZoom;
+      cam.y = wy - (sy - h / 2) / newZoom;
+      cam.zoom = newZoom;
+    };
+
+    // passive: false is REQUIRED so e.preventDefault() blocks browser-level site zoom
+    canvas.addEventListener('wheel', handleWheelNative, { passive: false });
+
+    return () => {
+      canvas.removeEventListener('wheel', handleWheelNative);
+    };
+  }, [canvasSize]);
+
+  // --- Pointer Handlers (Rock-Solid Pan and Navigation) ---
   const screenToWorld = useCallback((sx: number, sy: number): Position => {
     const cam = cameraRef.current;
     return {
@@ -95,12 +135,22 @@ export default function FleetMap() {
     };
   }, [canvasSize]);
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+  const handlePointerDown = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (e.button !== 0) return; // Only primary button
     const cam = cameraRef.current;
-    dragRef.current = { dragging: true, startX: e.clientX, startY: e.clientY, camStartX: cam.x, camStartY: cam.y };
+    dragRef.current = {
+      dragging: true,
+      startX: e.clientX,
+      startY: e.clientY,
+      camStartX: cam.x,
+      camStartY: cam.y
+    };
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {}
   }, []);
 
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+  const handlePointerMove = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     const drag = dragRef.current;
     if (!drag.dragging) return;
     const cam = cameraRef.current;
@@ -110,10 +160,14 @@ export default function FleetMap() {
     cam.y = drag.camStartY - dy;
   }, []);
 
-  const handleMouseUp = useCallback((e: React.MouseEvent) => {
+  const handlePointerUp = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     const drag = dragRef.current;
+    if (!drag.dragging) return;
     const movedDist = Math.abs(e.clientX - drag.startX) + Math.abs(e.clientY - drag.startY);
     drag.dragging = false;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {}
 
     // If it was a click (not a drag), check for robot selection
     if (movedDist < 5) {
@@ -137,11 +191,11 @@ export default function FleetMap() {
     }
   }, [robots, screenToWorld, selectRobot]);
 
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    e.preventDefault();
-    const cam = cameraRef.current;
-    const factor = e.deltaY < 0 ? 1.1 : 0.9;
-    cam.zoom = Math.max(0.2, Math.min(5, cam.zoom * factor));
+  const handlePointerCancel = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+    dragRef.current.dragging = false;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {}
   }, []);
 
   // --- Render Loop ---
@@ -190,27 +244,27 @@ export default function FleetMap() {
       for (const obs of map.obstacles) {
         if (obs.type === 'shed') {
           // Shed building base
-          ctx.fillStyle = '#080e1a';
-          ctx.strokeStyle = '#1e3a5f';
+          ctx.fillStyle = '#f8fafc';
+          ctx.strokeStyle = '#0f172a';
           ctx.lineWidth = 1.5;
           ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
           ctx.strokeRect(obs.x, obs.y, obs.w, obs.h);
 
           // Dedicated High-Contrast Header Bar Plate
           const headerH = 26;
-          ctx.fillStyle = '#0f233d';
+          ctx.fillStyle = '#0f172a';
           ctx.fillRect(obs.x, obs.y, obs.w, headerH);
-          ctx.strokeStyle = '#0284c7';
+          ctx.strokeStyle = '#0f172a';
           ctx.lineWidth = 1;
           ctx.strokeRect(obs.x, obs.y, obs.w, headerH);
 
           // Status indicator dot
-          ctx.fillStyle = '#10b981';
+          ctx.fillStyle = '#22c55e';
           ctx.beginPath();
           ctx.arc(obs.x + 14, obs.y + headerH / 2, 3.5, 0, Math.PI * 2);
           ctx.fill();
 
-          // Shed Title in crisp, bright white/cyan
+          // Shed Title in crisp white on black plate
           ctx.fillStyle = '#ffffff';
           ctx.font = 'bold 12px monospace';
           ctx.textAlign = 'left';
@@ -218,13 +272,13 @@ export default function FleetMap() {
           ctx.fillText(obs.label || 'POULTRY SHED', obs.x + 24, obs.y + headerH / 2);
 
           // Header Sub-label tag
-          ctx.fillStyle = '#38bdf8';
+          ctx.fillStyle = '#94a3b8';
           ctx.font = 'bold 9px monospace';
           ctx.textAlign = 'right';
           ctx.fillText('CLIMATE & PIPES', obs.x + obs.w - 10, obs.y + headerH / 2);
 
           // Subtle bay zone divider inside shed
-          ctx.strokeStyle = 'rgba(30, 58, 95, 0.4)';
+          ctx.strokeStyle = 'rgba(15, 23, 42, 0.15)';
           ctx.setLineDash([3, 3]);
           ctx.beginPath();
           ctx.moveTo(obs.x + obs.w / 2, obs.y + headerH);
@@ -232,17 +286,17 @@ export default function FleetMap() {
           ctx.stroke();
           ctx.setLineDash([]);
         } else if (obs.type === 'tank') {
-          ctx.fillStyle = '#082f49';
-          ctx.strokeStyle = '#06b6d4';
+          ctx.fillStyle = '#f8fafc';
+          ctx.strokeStyle = '#0f172a';
           ctx.lineWidth = 1.5;
           ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
           ctx.strokeRect(obs.x, obs.y, obs.w, obs.h);
 
           // Tank Header Plate
           const headerH = 24;
-          ctx.fillStyle = '#0c4a6e';
+          ctx.fillStyle = '#1e293b';
           ctx.fillRect(obs.x, obs.y, obs.w, headerH);
-          ctx.strokeStyle = '#38bdf8';
+          ctx.strokeStyle = '#1e293b';
           ctx.lineWidth = 1;
           ctx.strokeRect(obs.x, obs.y, obs.w, headerH);
 
@@ -252,41 +306,78 @@ export default function FleetMap() {
           ctx.textBaseline = 'middle';
           ctx.fillText(obs.label || 'WATER TANK', obs.x + obs.w / 2, obs.y + headerH / 2);
 
-          ctx.fillStyle = '#7dd3fc';
+          ctx.fillStyle = '#0f172a';
           ctx.font = 'bold 10px monospace';
           ctx.fillText('💧 Supply Manifold', obs.x + obs.w / 2, obs.y + obs.h / 2 + 10);
         } else if (obs.type === 'substation') {
-          ctx.fillStyle = '#261908';
-          ctx.strokeStyle = '#ca8a04';
+          ctx.fillStyle = '#f8fafc';
+          ctx.strokeStyle = '#0f172a';
           ctx.lineWidth = 1.5;
           ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
           ctx.strokeRect(obs.x, obs.y, obs.w, obs.h);
 
           // Substation Header Plate
           const headerH = 24;
-          ctx.fillStyle = '#422006';
+          ctx.fillStyle = '#334155';
           ctx.fillRect(obs.x, obs.y, obs.w, headerH);
-          ctx.strokeStyle = '#eab308';
+          ctx.strokeStyle = '#334155';
           ctx.lineWidth = 1;
           ctx.strokeRect(obs.x, obs.y, obs.w, headerH);
 
-          ctx.fillStyle = '#fef08a';
+          ctx.fillStyle = '#ffffff';
           ctx.font = 'bold 11px monospace';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
           ctx.fillText(obs.label || 'SUBSTATION', obs.x + obs.w / 2, obs.y + headerH / 2);
 
-          ctx.fillStyle = '#fbbf24';
+        } else if (obs.type === 'pump') {
+          // Pump Station building base
+          ctx.fillStyle = '#f8fafc';
+          ctx.strokeStyle = '#0f172a';
+          ctx.lineWidth = 1.5;
+          ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
+          ctx.strokeRect(obs.x, obs.y, obs.w, obs.h);
+
+          // Dedicated High-Contrast Header Bar Plate
+          const headerH = 26;
+          ctx.fillStyle = '#0f172a';
+          ctx.fillRect(obs.x, obs.y, obs.w, headerH);
+          ctx.strokeStyle = '#0f172a';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(obs.x, obs.y, obs.w, headerH);
+
+          // Status indicator dot
+          ctx.fillStyle = '#22c55e';
+          ctx.beginPath();
+          ctx.arc(obs.x + 14, obs.y + headerH / 2, 3.5, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Pump Title
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 12px monospace';
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(obs.label || 'WATER PUMP STATION', obs.x + 24, obs.y + headerH / 2);
+
+          // Header Sub-label tag
+          ctx.fillStyle = '#94a3b8';
+          ctx.font = 'bold 9px monospace';
+          ctx.textAlign = 'right';
+          ctx.fillText('PUMPS & PRESSURE', obs.x + obs.w - 10, obs.y + headerH / 2);
+
+          // Center Glyph
+          ctx.fillStyle = '#0f172a';
           ctx.font = 'bold 10px monospace';
-          ctx.fillText('⚡ 415V/230V Dist', obs.x + obs.w / 2, obs.y + obs.h / 2 + 10);
+          ctx.textAlign = 'center';
+          ctx.fillText('⚙️ HIGH-PRESSURE PUMP MANIFOLD', obs.x + obs.w / 2, obs.y + obs.h / 2 + 10);
         } else {
-          ctx.fillStyle = '#1c1917';
-          ctx.strokeStyle = '#78716c';
+          ctx.fillStyle = '#f1f5f9';
+          ctx.strokeStyle = '#0f172a';
           ctx.lineWidth = 1;
           ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
           ctx.strokeRect(obs.x, obs.y, obs.w, obs.h);
           if (obs.label) {
-            ctx.fillStyle = '#f5f5f4';
+            ctx.fillStyle = '#0f172a';
             ctx.font = 'bold 11px monospace';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
@@ -350,11 +441,12 @@ export default function FleetMap() {
           ctx.stroke();
 
           // Connect to nearby active robots
-          for (let i = 0; i < robots.length; i += 10) {
+          const stepSize = Math.max(1, Math.floor(robots.length / 50));
+          for (let i = 0; i < robots.length; i += stepSize) {
             const other = robots[i];
-            if (other.id !== relay.id && (other.state === 'active' || other.state === 'negotiating')) {
+            if (other.id !== relay.id && (other.state === 'active' || other.state === 'negotiating' || other.state === 'idle')) {
               const d = Math.sqrt((relay.position.x - other.position.x) ** 2 + (relay.position.y - other.position.y) ** 2);
-              if (d < 100) {
+              if (d < 180) {
                 ctx.beginPath();
                 ctx.moveTo(relay.position.x, relay.position.y);
                 ctx.lineTo(other.position.x, other.position.y);
@@ -441,8 +533,8 @@ export default function FleetMap() {
         const sBoxH = 17;
         const sBoxY = -23;
 
-        ctx.fillStyle = isCritical ? 'rgba(80, 10, 10, 0.95)' : 'rgba(10, 18, 35, 0.95)';
-        ctx.strokeStyle = isCritical ? '#ef4444' : '#0284c7';
+        ctx.fillStyle = isCritical ? 'rgba(254, 242, 242, 0.95)' : 'rgba(255, 255, 255, 0.95)';
+        ctx.strokeStyle = isCritical ? '#ef4444' : '#0f172a';
         ctx.lineWidth = 1;
         ctx.beginPath();
         if (ctx.roundRect) {
@@ -453,7 +545,7 @@ export default function FleetMap() {
         ctx.fill();
         ctx.stroke();
 
-        ctx.fillStyle = isCritical ? '#fecaca' : '#ffffff';
+        ctx.fillStyle = isCritical ? '#991b1b' : '#0f172a';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(labelText, 0, sBoxY + sBoxH / 2);
@@ -526,15 +618,17 @@ export default function FleetMap() {
         }
       }
 
-      // Draw robots (batch by state for perf)
+      // Draw robots (dynamically optimized for small fleets like 5 bots up to 500 bots)
       const selectedRobot = robots.find(r => r.id === selectedRobotId);
+      const isSmallFleet = robots.length <= 25;
 
       for (const robot of robots) {
         const isSelected = robot.id === selectedRobotId;
         const color = getRobotColor(robot.state);
         const px = robot.position.x;
         const py = robot.position.y;
-        const radius = isSelected ? 6 : 4;
+        const baseRadius = isSmallFleet ? 9 : 4;
+        const radius = isSelected ? baseRadius + 3 : baseRadius;
 
         // Robot body
         ctx.fillStyle = color;
@@ -542,13 +636,20 @@ export default function FleetMap() {
         ctx.arc(px, py, radius, 0, Math.PI * 2);
         ctx.fill();
 
-        // Glow effect for active/selected
-        if (isSelected || robot.state === 'active') {
+        // High contrast border for small fleets so they pop out
+        if (isSmallFleet) {
+          ctx.strokeStyle = '#0f172a';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        }
+
+        // Glow effect
+        if (isSelected || robot.state === 'active' || isSmallFleet) {
           ctx.save();
-          ctx.globalAlpha = isSelected ? 0.5 : 0.2;
+          ctx.globalAlpha = isSelected ? 0.35 : (isSmallFleet ? 0.2 : 0.12);
           ctx.fillStyle = color;
           ctx.beginPath();
-          ctx.arc(px, py, radius + 4, 0, Math.PI * 2);
+          ctx.arc(px, py, radius + (isSmallFleet ? 6 : 4), 0, Math.PI * 2);
           ctx.fill();
           ctx.globalAlpha = 1;
           ctx.restore();
@@ -556,11 +657,11 @@ export default function FleetMap() {
 
         // Pulsing effect for failed/deadlocked
         if (robot.state === 'failed' || robot.state === 'deadlocked') {
-          const pulseR = radius + 3 + Math.sin(frame * 0.15) * 3;
+          const pulseR = radius + 4 + Math.sin(frame * 0.15) * 4;
           ctx.save();
-          ctx.globalAlpha = 0.3;
+          ctx.globalAlpha = 0.4;
           ctx.strokeStyle = color;
-          ctx.lineWidth = 1.5;
+          ctx.lineWidth = 2;
           ctx.beginPath();
           ctx.arc(px, py, pulseR, 0, Math.PI * 2);
           ctx.stroke();
@@ -568,30 +669,44 @@ export default function FleetMap() {
           ctx.restore();
         }
 
-        // Selection ring
-        if (isSelected) {
-          ctx.strokeStyle = COLORS.robotSelected;
-          ctx.lineWidth = 2;
-          ctx.beginPath();
-          ctx.arc(px, py, radius + 8, 0, Math.PI * 2);
-          ctx.stroke();
+        // Always show ID tag & battery bar if small fleet (e.g. 5 robots) OR if selected!
+        if (isSelected || isSmallFleet) {
+          if (isSelected) {
+            ctx.strokeStyle = '#0f172a';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(px, py, radius + 8, 0, Math.PI * 2);
+            ctx.stroke();
+          }
 
-          // Show ID label
-          ctx.fillStyle = COLORS.textBright;
-          ctx.font = 'bold 10px monospace';
+          // Show ID label with high-contrast white badge background
+          const label = robot.id;
+          ctx.font = isSmallFleet ? 'bold 11px monospace' : 'bold 10px monospace';
           ctx.textAlign = 'center';
-          ctx.textBaseline = 'bottom';
-          ctx.fillText(robot.id, px, py - radius - 10);
+          ctx.textBaseline = 'middle';
+          const ltw = ctx.measureText(label).width;
+          const bgH = isSmallFleet ? 15 : 13;
+          const bgY = py - radius - (isSmallFleet ? 13 : 10);
+
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+          ctx.fillRect(px - ltw / 2 - 4, bgY - bgH / 2, ltw + 8, bgH);
+          ctx.strokeStyle = isSelected ? '#000000' : (robot.state === 'active' ? '#0f172a' : '#94a3b8');
+          ctx.lineWidth = isSelected ? 1.5 : 1;
+          ctx.strokeRect(px - ltw / 2 - 4, bgY - bgH / 2, ltw + 8, bgH);
+
+          ctx.fillStyle = '#0f172a';
+          ctx.fillText(label, px, bgY);
 
           // Battery bar
-          const barW = 24;
-          const barH = 3;
+          const barW = isSmallFleet ? 28 : 24;
+          const barH = isSmallFleet ? 4 : 3;
           const barX = px - barW / 2;
-          const barY = py - radius - 8;
-          ctx.fillStyle = '#1e293b';
+          const barY = py + radius + 4;
+          ctx.fillStyle = '#e2e8f0';
           ctx.fillRect(barX, barY, barW, barH);
-          ctx.fillStyle = robot.battery > 20 ? '#22c55e' : '#ef4444';
-          ctx.fillRect(barX, barY, barW * (robot.battery / 100), barH);
+          ctx.fillStyle = robot.battery > 50 ? '#16a34a' : (robot.battery > 20 ? '#d97706' : '#dc2626');
+          const clampedBattery = Math.max(0, Math.min(100, robot.battery));
+          ctx.fillRect(barX, barY, barW * (clampedBattery / 100), barH);
         }
       }
 
@@ -629,49 +744,55 @@ export default function FleetMap() {
   }, [canvasSize, robots, map, conflicts, negotiations, selectedRobotId, isControllerOnline, waterPipes]);
 
   return (
-    <div ref={containerRef} className="relative w-full h-full min-h-[400px] rounded-xl overflow-hidden border border-slate-700/50 bg-[#080c14]">
+    <div ref={containerRef} className="relative w-full h-full min-h-[400px] rounded-xl overflow-hidden bg-white select-none">
       <canvas
         ref={canvasRef}
-        className="w-full h-full cursor-grab active:cursor-grabbing"
+        className="w-full h-full cursor-grab active:cursor-grabbing touch-none"
         style={{ width: canvasSize.w, height: canvasSize.h }}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onWheel={handleWheel}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerCancel}
       />
+
       {/* Step 20 Showstopper: Controller Offline Floating Warning Banner */}
       {!isControllerOnline && (
-        <div className="absolute top-3 left-3 flex items-center gap-2 px-3 py-1.5 rounded-lg bg-rose-950/90 border border-rose-500 text-rose-200 text-xs font-mono font-bold shadow-2xl animate-pulse backdrop-blur-md z-10">
-          <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping" />
+        <div className="absolute top-3 left-3 flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-50 border border-red-500 text-red-700 text-xs font-mono font-bold shadow-md animate-pulse backdrop-blur-md z-10">
+          <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
           <span>🔴 CENTRAL CONTROLLER OFFLINE — DECENTRALIZED P2P MESH ACTIVE (500 UNITS)</span>
         </div>
       )}
+
       {/* Legend Overlay */}
-      <div className="absolute bottom-3 left-3 bg-slate-900/95 backdrop-blur-md rounded-lg px-3 py-2 text-xs font-mono border border-slate-700/80 shadow-2xl">
-        <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1.5 text-slate-200 font-medium">
-          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-cyan-400 inline-block shadow-sm shadow-cyan-400/50" /> Active</span>
-          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block" /> Idle</span>
-          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-lime-400 inline-block" /> Charging</span>
-          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" /> Failed</span>
-          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-purple-400 inline-block" /> Negotiating</span>
-          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block" /> Deadlocked</span>
-          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-yellow-400 inline-block" /> Charging Stn</span>
-          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-sky-400 inline-block" /> Task Stn</span>
+      <div className="absolute bottom-3 left-3 bg-white/95 backdrop-blur-md rounded-lg px-3 py-2 text-xs font-mono border border-slate-300 shadow-md z-10 text-slate-800">
+        <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1.5 font-medium">
+          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-slate-900 inline-block shadow-xs" /> Active</span>
+          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-slate-400 inline-block" /> Idle</span>
+          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-600 inline-block" /> Charging</span>
+          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-600 inline-block" /> Failed</span>
+          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-purple-600 inline-block" /> Negotiating</span>
+          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-rose-600 inline-block" /> Deadlocked</span>
+          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-yellow-500 inline-block" /> Charging Stn</span>
+          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-sky-500 inline-block" /> Task Stn</span>
         </div>
       </div>
-      {/* Zoom Controls */}
-      <div className="absolute top-3 right-3 flex flex-col gap-1">
+
+      {/* Zoom Controls (Docked cleanly at bottom-right, well clear of top actions) */}
+      <div className="absolute bottom-3 right-3 flex items-center gap-1 bg-white/95 backdrop-blur-md p-1 rounded-lg border border-slate-300 shadow-md z-10">
         <button
           onClick={() => { cameraRef.current.zoom = Math.min(5, cameraRef.current.zoom * 1.3); }}
-          className="w-8 h-8 bg-slate-800/90 hover:bg-slate-700 border border-slate-600/50 rounded-md text-slate-300 text-lg font-bold backdrop-blur-sm transition-colors"
+          title="Zoom In"
+          className="w-7 h-7 flex items-center justify-center bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded text-slate-900 text-sm font-bold transition-colors"
         >+</button>
         <button
           onClick={() => { cameraRef.current.zoom = Math.max(0.2, cameraRef.current.zoom / 1.3); }}
-          className="w-8 h-8 bg-slate-800/90 hover:bg-slate-700 border border-slate-600/50 rounded-md text-slate-300 text-lg font-bold backdrop-blur-sm transition-colors"
+          title="Zoom Out"
+          className="w-7 h-7 flex items-center justify-center bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded text-slate-900 text-sm font-bold transition-colors"
         >−</button>
         <button
           onClick={() => { cameraRef.current.zoom = 1; cameraRef.current.x = map.width / 2; cameraRef.current.y = map.height / 2; }}
-          className="w-8 h-8 bg-slate-800/90 hover:bg-slate-700 border border-slate-600/50 rounded-md text-slate-300 text-[9px] font-bold backdrop-blur-sm transition-colors"
+          title="Reset Camera & Fit Map"
+          className="px-2 h-7 flex items-center justify-center bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded text-black text-[10px] font-mono font-bold transition-colors"
         >FIT</button>
       </div>
     </div>
@@ -704,7 +825,7 @@ function drawGrid(ctx: CanvasRenderingContext2D, cam: { x: number; y: number; zo
   }
 
   // Map boundary
-  ctx.strokeStyle = '#1e3a5f';
+  ctx.strokeStyle = '#0f172a';
   ctx.lineWidth = 2;
   ctx.strokeRect(0, 0, map.width, map.height);
 }
@@ -721,9 +842,9 @@ function drawHUD(ctx: CanvasRenderingContext2D, w: number, h: number, cam: { x: 
   const by = isOnline ? 12 : 46;
 
   // Background pill
-  ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
-  ctx.strokeStyle = isOnline ? 'rgba(56, 189, 248, 0.5)' : '#ef4444';
-  ctx.lineWidth = 1;
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+  ctx.strokeStyle = isOnline ? '#0f172a' : '#dc2626';
+  ctx.lineWidth = 1.5;
   ctx.beginPath();
   if (ctx.roundRect) {
     ctx.roundRect(bx, by, bw, bh, 6);
@@ -734,13 +855,13 @@ function drawHUD(ctx: CanvasRenderingContext2D, w: number, h: number, cam: { x: 
   ctx.stroke();
 
   // Status dot
-  ctx.fillStyle = isOnline ? '#10b981' : '#ef4444';
+  ctx.fillStyle = isOnline ? '#16a34a' : '#dc2626';
   ctx.beginPath();
   ctx.arc(bx + 12, by + bh / 2, 3.5, 0, Math.PI * 2);
   ctx.fill();
 
-  // Crisp high-contrast white text
-  ctx.fillStyle = '#ffffff';
+  // Crisp high-contrast black text
+  ctx.fillStyle = '#0f172a';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
   ctx.fillText(text, bx + 22, by + bh / 2);
