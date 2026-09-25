@@ -24,6 +24,7 @@ export const CommunityIssuePanel: React.FC = () => {
     setSimSpeed, 
     triggerCommunityIssue,
     robots,
+    setRobotCount,
     failCommunityRobot,
     recoverCommunityRobot
   } = useCommunityStore();
@@ -60,8 +61,25 @@ export const CommunityIssuePanel: React.FC = () => {
           </p>
         </div>
 
-        {/* Speed & Sim Toggle */}
-        <div className="flex items-center gap-2">
+        {/* Speed, Fleet Size & Sim Toggle */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Fleet Count Selector */}
+          <div className="flex items-center border-2 border-black bg-white">
+            <span className="px-2 py-1 text-[10px] font-bold text-neutral-500 uppercase tracking-wider">Fleet</span>
+            {[1, 3, 5, 10, 20].map(cnt => (
+              <button
+                key={cnt}
+                onClick={() => setRobotCount(cnt)}
+                title={`Scale community fleet to ${cnt} robots`}
+                className={`px-2 py-1 text-xs font-bold border-l border-neutral-300 transition-colors ${
+                  robots.length === cnt ? 'bg-black text-white' : 'text-black hover:bg-neutral-100'
+                }`}
+              >
+                {cnt}
+              </button>
+            ))}
+          </div>
+
           <button
             onClick={toggleSimulation}
             className={`px-3 py-1.5 border-2 border-black text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm ${
