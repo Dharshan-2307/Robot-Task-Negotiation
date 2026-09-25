@@ -35,28 +35,28 @@ export default function LiveEventFeed() {
     .reverse();
 
   return (
-    <div className="flex flex-col h-full bg-slate-900/60 rounded-xl border border-slate-700/50 overflow-hidden">
+    <div className="flex flex-col h-full bg-white rounded-xl border border-slate-200 overflow-hidden text-slate-900">
       {/* Header */}
-      <div className="flex items-center justify-between p-3 border-b border-slate-700/50 bg-slate-900/80">
+      <div className="flex items-center justify-between p-3 border-b border-slate-200 bg-slate-50">
         <div className="flex items-center gap-2">
-          <Activity className="w-4 h-4 text-cyan-400" />
-          <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider">
+          <Activity className="w-4 h-4 text-black" />
+          <h3 className="text-xs font-bold text-black uppercase tracking-wider">
             Live Fleet Event Stream
           </h3>
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
         </div>
 
         {/* Filters */}
         <div className="flex items-center gap-1">
-          <Filter className="w-3 h-3 text-slate-500 mr-1" />
+          <Filter className="w-3 h-3 text-slate-400 mr-1" />
           {(['all', 'critical', 'warning', 'info'] as const).map(sev => (
             <button
               key={sev}
               onClick={() => setSeverityFilter(sev)}
               className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase transition-colors ${
                 severityFilter === sev
-                  ? 'bg-cyan-600 text-white'
-                  : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                  ? 'bg-black text-white'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-black'
               }`}
             >
               {sev}
@@ -68,8 +68,8 @@ export default function LiveEventFeed() {
       {/* Feed list */}
       <div className="flex-1 overflow-y-auto p-2.5 space-y-1.5 scrollbar-thin">
         {filteredEvents.length === 0 ? (
-          <div className="h-40 flex flex-col items-center justify-center text-slate-600">
-            <Activity className="w-8 h-8 opacity-30 mb-2" />
+          <div className="h-40 flex flex-col items-center justify-center text-slate-400">
+            <Activity className="w-8 h-8 opacity-40 mb-2 text-slate-400" />
             <p className="text-xs">Awaiting live telemetry events...</p>
           </div>
         ) : (
@@ -86,10 +86,10 @@ export default function LiveEventFeed() {
                 key={evt.id}
                 className={`p-2 rounded-lg text-xs flex items-start gap-2 border transition-all ${
                   evt.severity === 'critical'
-                    ? 'bg-red-950/20 border-red-800/30 text-red-200'
+                    ? 'bg-red-50 border-red-200 text-red-900'
                     : evt.severity === 'warning'
-                    ? 'bg-amber-950/20 border-amber-800/30 text-amber-200'
-                    : 'bg-slate-800/30 border-slate-700/30 text-slate-300'
+                    ? 'bg-amber-50 border-amber-200 text-amber-900'
+                    : 'bg-slate-50 border-slate-200 text-slate-800'
                 }`}
               >
                 <div className="mt-0.5 shrink-0">
@@ -99,7 +99,7 @@ export default function LiveEventFeed() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-1 mb-0.5">
                     <span className="text-[10px] font-mono text-slate-500">{timeStr}</span>
-                    <span className="text-[9px] font-mono px-1 rounded bg-slate-800 text-slate-400">
+                    <span className="text-[9px] font-mono px-1 rounded bg-slate-200 text-slate-700">
                       {evt.type}
                     </span>
                   </div>
@@ -112,7 +112,7 @@ export default function LiveEventFeed() {
                         <button
                           key={rid}
                           onClick={() => selectRobot(rid)}
-                          className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-slate-800/80 hover:bg-cyan-900/50 text-cyan-400 border border-slate-700 hover:border-cyan-600 transition-colors"
+                          className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-slate-200 hover:bg-slate-300 text-slate-900 border border-slate-300 transition-colors"
                         >
                           {rid}
                         </button>
