@@ -10,6 +10,7 @@ import {
   IoTTelemetryRow
 } from '@/types';
 import { SimulationEngine } from '@/engine/SimulationEngine';
+import { DEFAULT_IOT_TELEMETRY } from '@/data/defaultTelemetry';
 
 interface FleetStore {
   // --- Connection ---
@@ -128,8 +129,8 @@ export const useFleetStore = create<FleetStore>((set, get) => ({
   heroDemoState: null,
   isControllerOnline: true,
 
-  // --- IoT Telemetry Logs ---
-  telemetryLogs: [],
+  // --- IoT Telemetry Logs (Preloaded from Google Sheets by Default) ---
+  telemetryLogs: DEFAULT_IOT_TELEMETRY,
   activeTelemetryIndex: 0,
 
   selectedRobotId: null,
@@ -157,6 +158,7 @@ export const useFleetStore = create<FleetStore>((set, get) => ({
 
     set({ engine, connectionStatus: 'simulated' });
     get().syncFromEngine();
+    get().stepTelemetryLog(0);
   },
 
   setRobotCount: (robotCount: number) => {
