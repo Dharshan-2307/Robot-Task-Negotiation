@@ -25,7 +25,12 @@ export default function ImportDataModal({ isOpen, onClose }: ImportDataModalProp
   const [activeTab, setActiveTab] = useState<'excel' | 'google-sheet' | 'iot-telemetry'>('excel');
   const [isDragging, setIsDragging] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [googleSheetUrl, setGoogleSheetUrl] = useState('');
+  const [googleSheetUrl, setGoogleSheetUrl] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('agriswarm_iot_sheet_url') || '';
+    }
+    return '';
+  });
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -74,6 +79,12 @@ export default function ImportDataModal({ isOpen, onClose }: ImportDataModalProp
     setLoading(true);
     setImportResult(null);
     setSuccessMessage(null);
+
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('agriswarm_iot_sheet_url', googleSheetUrl.trim());
+      }
+    } catch {}
 
     const res = await parseGoogleSheetUrl(googleSheetUrl.trim());
     setImportResult(res);

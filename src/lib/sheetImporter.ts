@@ -330,9 +330,9 @@ export async function parseGoogleSheetUrl(url: string): Promise<ImportResult> {
     const gidMatch = url.match(/[#&?]gid=([0-9]+)/);
     const gid = gidMatch ? gidMatch[1] : '0';
 
-    const csvExportUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
+    const csvExportUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}&_t=${Date.now()}`;
 
-    const res = await fetch(csvExportUrl);
+    const res = await fetch(csvExportUrl, { cache: 'no-store' });
     if (!res.ok) {
       throw new Error(`Could not access Google Sheet. Please make sure the sheet sharing is set to "Anyone with the link can view". (HTTP ${res.status})`);
     }
