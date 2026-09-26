@@ -22,11 +22,12 @@ import SensorFaultPanel from '@/components/SensorFaultPanel';
 import HeroDemoBanner from '@/components/HeroDemoBanner';
 import BackendConnectModal from '@/components/BackendConnectModal';
 import { PoultryWaterNetwork } from '@/components/PoultryWaterNetwork';
+import IoTTelemetryHub from '@/components/IoTTelemetryHub';
 import {
   Map, ListTodo, Handshake, ShieldAlert,
   BarChart3, Activity, Radio, Wifi, Terminal,
   FileSpreadsheet, Sparkles, Flame, Droplets, ChevronDown,
-  ChevronLeft, ChevronRight
+  ChevronLeft, ChevronRight, Cpu
 } from 'lucide-react';
 
 export default function MissionControl() {
@@ -148,6 +149,19 @@ export default function MissionControl() {
           >
             <Droplets className="w-3.5 h-3.5" />
             Water & Pumps
+          </button>
+
+          <button
+            onClick={() => setActiveTab('iot-hub')}
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+              activeTab === 'iot-hub'
+                ? 'bg-black text-white shadow-xs'
+                : 'text-slate-600 hover:text-black hover:bg-white/80'
+            }`}
+          >
+            <Cpu className="w-3.5 h-3.5 text-amber-500" />
+            <span>IoT Telemetry Hub</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
           </button>
 
           {/* Categorized 'More Modules' Dropdown */}
@@ -348,6 +362,7 @@ export default function MissionControl() {
         <div className="flex lg:hidden overflow-x-auto gap-1 p-1 bg-slate-100 rounded-xl border border-slate-200">
           {[
             { id: 'dashboard', label: 'Farm Map' },
+            { id: 'iot-hub', label: 'IoT Hub' },
             { id: 'negotiations', label: 'Negotiation' },
             { id: 'water-network', label: 'Water' },
             { id: 'sensors', label: 'Sensors' },
@@ -389,6 +404,11 @@ export default function MissionControl() {
             {activeTab === 'dashboard' && (
               <div className="w-full h-full min-h-[520px]">
                 <FleetMap />
+              </div>
+            )}
+            {activeTab === 'iot-hub' && (
+              <div className="w-full h-full min-h-[520px] p-2">
+                <IoTTelemetryHub onOpenImportModal={() => setIsImportModalOpen(true)} />
               </div>
             )}
             {activeTab === 'water-network' && (

@@ -10,8 +10,10 @@ import {
   AlertCircle, Download, ArrowRight, Loader2, Sparkles
 } from 'lucide-react';
 import {
-  parseExcelOrCsv, parseGoogleSheetUrl, applyImportedData, ImportResult
+  parseExcelOrCsv, parseGoogleSheetUrl, applyImportedData, ImportResult,
+  DEFAULT_IOT_TELEMETRY, parseIoTTelemetryFromRows
 } from '@/lib/sheetImporter';
+import { useFleetStore } from '@/store/useFleetStore';
 import * as XLSX from 'xlsx';
 
 interface ImportDataModalProps {
@@ -20,7 +22,7 @@ interface ImportDataModalProps {
 }
 
 export default function ImportDataModal({ isOpen, onClose }: ImportDataModalProps) {
-  const [activeTab, setActiveTab] = useState<'excel' | 'google-sheet'>('excel');
+  const [activeTab, setActiveTab] = useState<'excel' | 'google-sheet' | 'iot-telemetry'>('excel');
   const [isDragging, setIsDragging] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleSheetUrl, setGoogleSheetUrl] = useState('');
@@ -78,14 +80,42 @@ export default function ImportDataModal({ isOpen, onClose }: ImportDataModalProp
     setLoading(false);
   };
 
+  // --- Load IoT Telemetry Preset Dataset ---
+  const handleLoadIoTDataset = () => {
+    setLoading(true);
+    setSuccessMessage(null);
+    setTimeout(() => {
+      const parsed = parseIoTTelemetryFromRows(DEFAULT_IOT_TELEMETRY as any);
+      setImportResult({
+        robots: [],
+        tasks: parsed.generatedTasks,
+        telemetry: parsed.telemetry,
+        summary: {
+          robotsCount: 0,
+          tasksCount: parsed.generatedTasks.length,
+          telemetryCount: parsed.telemetry.length,
+          detectedSheets: ['Poultry_IoT_Telemetry_Live.csv'],
+          detectedFaults: ['WAIT_DRY_RUN', 'TANK_EMPTY', 'PIPE_DAMAGE', 'PIPE2_ERROR', 'TANK_FULL'],
+        },
+        errors: [],
+      });
+      setLoading(false);
+    }, 200);
+  };
+
   // --- Apply Data into Fleet Store ---
   const handleApply = () => {
     if (!importResult) return;
     applyImportedData(importResult);
-    setSuccessMessage(`Successfully loaded ${importResult.summary.robotsCount} robots and ${importResult.summary.tasksCount} tasks into Mission Control!`);
+    if (importResult.summary.telemetryCount && importResult.summary.telemetryCount > 0) {
+      setSuccessMessage(`Loaded ${importResult.summary.telemetryCount} IoT telemetry readings & ${importResult.summary.tasksCount} emergency tasks! Opening Telemetry Hub...`);
+      useFleetStore.getState().setActiveTab('iot-hub');
+    } else {
+      setSuccessMessage(`Successfully loaded ${importResult.summary.robotsCount} robots and ${importResult.summary.tasksCount} tasks into Mission Control!`);
+    }
     setTimeout(() => {
       onClose();
-    }, 1500);
+    }, 1000);
   };
 
   // --- Download Starter Sample Template ---
@@ -145,25 +175,39 @@ export default function ImportDataModal({ isOpen, onClose }: ImportDataModalProp
         <div className="flex border-b border-slate-200 bg-slate-50 p-1 gap-1">
           <button
             onClick={() => setActiveTab('excel')}
-            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all ${
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-all ${
               activeTab === 'excel'
                 ? 'bg-black text-white shadow-xs'
                 : 'text-slate-600 hover:text-black hover:bg-white'
             }`}
           >
             <FileSpreadsheet className="w-4 h-4" />
-            Excel / CSV File Upload
+            Excel / CSV Upload
           </button>
           <button
             onClick={() => setActiveTab('google-sheet')}
-            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all ${
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-all ${
               activeTab === 'google-sheet'
                 ? 'bg-black text-white shadow-xs'
                 : 'text-slate-600 hover:text-black hover:bg-white'
             }`}
           >
             <Globe className="w-4 h-4" />
-            Google Sheets Live Sync
+            Google Sheets Sync
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab('iot-telemetry');
+              handleLoadIoTDataset();
+            }}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-all ${
+              activeTab === 'iot-telemetry'
+                ? 'bg-black text-white shadow-xs'
+                : 'text-slate-600 hover:text-black hover:bg-white'
+            }`}
+          >
+            <Sparkles className="w-4 h-4 text-amber-300" />
+            Poultry IoT Telemetry
           </button>
         </div>
 
@@ -214,7 +258,7 @@ export default function ImportDataModal({ isOpen, onClose }: ImportDataModalProp
                 </button>
               </div>
             </div>
-          ) : (
+          ) : activeTab === 'google-sheet' ? (
             <div className="space-y-3">
               <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
                 <label className="text-xs font-bold text-slate-800 block">
@@ -238,6 +282,52 @@ export default function ImportDataModal({ isOpen, onClose }: ImportDataModalProp
                   >
                     {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Globe className="w-4 h-4" />}
                     Fetch & Sync
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* IoT Telemetry Tab */
+            <div className="space-y-3">
+              <div className="p-4 bg-slate-50 border border-slate-300 rounded-xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xs font-bold text-slate-900 uppercase font-mono tracking-wider flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                      Poultry Farm Controller IoT Telemetry (20 Log Entries)
+                    </h3>
+                    <p className="text-[11px] text-slate-600 mt-0.5">
+                      Logged from automated farm controller: Dual Temp probes (<code className="font-bold text-black">TEM1/TEM2</code>), Flow switches (<code className="font-bold text-black">S1/S2</code>), Pump Motor relay, and Fault alarms.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+                  <div className="p-2 bg-white border border-slate-200 rounded-lg">
+                    <p className="text-[10px] text-slate-500 font-mono">Total Readings</p>
+                    <p className="text-sm font-bold font-mono text-black">19 Rows</p>
+                  </div>
+                  <div className="p-2 bg-white border border-slate-200 rounded-lg">
+                    <p className="text-[10px] text-slate-500 font-mono">Avg Temp</p>
+                    <p className="text-sm font-bold font-mono text-rose-600">31.95 °C</p>
+                  </div>
+                  <div className="p-2 bg-white border border-slate-200 rounded-lg">
+                    <p className="text-[10px] text-slate-500 font-mono">Avg Humidity</p>
+                    <p className="text-sm font-bold font-mono text-cyan-600">58% RH</p>
+                  </div>
+                  <div className="p-2 bg-white border border-slate-200 rounded-lg">
+                    <p className="text-[10px] text-slate-500 font-mono">Detected Faults</p>
+                    <p className="text-sm font-bold font-mono text-rose-600">4 Incidents</p>
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-1">
+                  <button
+                    onClick={handleLoadIoTDataset}
+                    className="flex items-center gap-2 px-4 py-2 bg-black hover:bg-slate-800 text-white text-xs font-bold rounded-lg transition shadow-xs"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                    Load & Stage 20 IoT Entries
                   </button>
                 </div>
               </div>
@@ -268,8 +358,21 @@ export default function ImportDataModal({ isOpen, onClose }: ImportDataModalProp
                   Parsed Data Preview
                 </span>
                 <div className="flex items-center gap-3 text-xs font-mono font-bold">
-                  <span className="text-black">{importResult.summary.robotsCount} Robots</span>
-                  <span className="text-slate-600">{importResult.summary.tasksCount} Tasks</span>
+                  {importResult.summary.telemetryCount ? (
+                    <>
+                      <span className="text-cyan-700 bg-cyan-50 px-2 py-0.5 rounded border border-cyan-200">
+                        {importResult.summary.telemetryCount} IoT Readings
+                      </span>
+                      <span className="text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+                        {importResult.summary.tasksCount} Emergency Tasks
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-black">{importResult.summary.robotsCount} Robots</span>
+                      <span className="text-slate-600">{importResult.summary.tasksCount} Tasks</span>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -285,8 +388,76 @@ export default function ImportDataModal({ isOpen, onClose }: ImportDataModalProp
               ) : (
                 <div className="space-y-2">
                   <p className="text-[11px] text-slate-600">
-                    Detected sheets: <span className="font-mono font-bold text-black">{importResult.summary.detectedSheets.join(', ')}</span>
+                    Detected source: <span className="font-mono font-bold text-black">{importResult.summary.detectedSheets.join(', ')}</span>
                   </p>
+
+                  {/* IoT Telemetry Rows Preview */}
+                  {importResult.telemetry && importResult.telemetry.length > 0 && (
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-slate-500 font-semibold uppercase text-[10px]">
+                          Synchronized IoT Telemetry Log Samples:
+                        </span>
+                        <span className="text-[10px] font-mono text-slate-500">
+                          {importResult.telemetry.length} rows staged
+                        </span>
+                      </div>
+                      <div className="max-h-48 overflow-y-auto border border-slate-200 rounded-lg bg-white overflow-hidden scrollbar-thin">
+                        <table className="w-full text-left text-[10px] font-mono">
+                          <thead className="bg-slate-100 text-slate-600 border-b border-slate-200 sticky top-0">
+                            <tr>
+                              <th className="p-1.5">TIME</th>
+                              <th className="p-1.5">TEM1</th>
+                              <th className="p-1.5">TEM2</th>
+                              <th className="p-1.5">S1</th>
+                              <th className="p-1.5">S2</th>
+                              <th className="p-1.5">MOTOR</th>
+                              <th className="p-1.5">STATUS</th>
+                              <th className="p-1.5">MODE</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {importResult.telemetry.slice(0, 10).map((row, idx) => {
+                              const isFault = row.status !== 'NORMAL' && row.status !== 'PIPE_NORMAL';
+                              return (
+                                <tr key={idx} className={isFault ? 'bg-rose-50/50' : ''}>
+                                  <td className="p-1.5 whitespace-nowrap text-slate-800">{row.datetime.split(' ')[1] || row.datetime}</td>
+                                  <td className="p-1.5 text-slate-900">{row.tem1}°C</td>
+                                  <td className="p-1.5 text-slate-900">{row.tem2}°C</td>
+                                  <td className="p-1.5">
+                                    <span className={`px-1 py-0.2 rounded text-[9px] ${row.s1 === 'WATER' ? 'text-emerald-700 bg-emerald-50' : 'text-slate-500 bg-slate-100'}`}>
+                                      {row.s1}
+                                    </span>
+                                  </td>
+                                  <td className="p-1.5">
+                                    <span className={`px-1 py-0.2 rounded text-[9px] ${row.s2 === 'WATER' ? 'text-emerald-700 bg-emerald-50' : 'text-slate-500 bg-slate-100'}`}>
+                                      {row.s2}
+                                    </span>
+                                  </td>
+                                  <td className="p-1.5">
+                                    <span className={`px-1 py-0.2 rounded font-bold text-[9px] ${row.motor === 'ON' ? 'text-emerald-700 bg-emerald-100' : 'text-slate-600 bg-slate-100'}`}>
+                                      {row.motor}
+                                    </span>
+                                  </td>
+                                  <td className="p-1.5 font-bold">
+                                    <span className={`px-1 py-0.2 rounded text-[9px] ${isFault ? 'text-rose-700 bg-rose-100 border border-rose-200' : 'text-emerald-700 bg-emerald-50'}`}>
+                                      {row.status}
+                                    </span>
+                                  </td>
+                                  <td className="p-1.5 text-slate-500">{row.mode}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                      {importResult.telemetry.length > 10 && (
+                        <p className="text-[10px] text-slate-400 text-center font-mono">
+                          +{importResult.telemetry.length - 10} additional readings staged
+                        </p>
+                      )}
+                    </div>
+                  )}
 
                   {/* Sample Robot Rows */}
                   {importResult.robots.length > 0 && (
@@ -310,7 +481,9 @@ export default function ImportDataModal({ isOpen, onClose }: ImportDataModalProp
                   {/* Sample Task Rows */}
                   {importResult.tasks.length > 0 && (
                     <div className="text-[11px] space-y-1">
-                      <span className="text-slate-500 font-semibold uppercase text-[10px]">Task Samples:</span>
+                      <span className="text-slate-500 font-semibold uppercase text-[10px]">
+                        Generated Response Tasks:
+                      </span>
                       <div className="flex flex-wrap gap-1.5">
                         {importResult.tasks.slice(0, 4).map(t => (
                           <span key={t.id} className="px-2 py-0.5 rounded bg-white text-slate-900 font-mono text-[10px] border border-slate-300 font-medium">
@@ -341,10 +514,10 @@ export default function ImportDataModal({ isOpen, onClose }: ImportDataModalProp
           </button>
           <button
             onClick={handleApply}
-            disabled={!importResult || (importResult.robots.length === 0 && importResult.tasks.length === 0)}
+            disabled={!importResult || (importResult.robots.length === 0 && importResult.tasks.length === 0 && (!importResult.telemetry || importResult.telemetry.length === 0))}
             className="flex items-center gap-1.5 px-5 py-2 bg-black hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed text-white text-xs font-bold rounded-lg transition-all shadow-xs"
           >
-            <span>Load into Command Center</span>
+            <span>View in Command Center</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>

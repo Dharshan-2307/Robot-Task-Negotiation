@@ -4,19 +4,45 @@
 
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
-import { Robot, Task, RobotCapability, TaskPriority, RobotState, TaskStatus } from '@/types';
+import { Robot, Task, RobotCapability, TaskPriority, RobotState, TaskStatus, IoTTelemetryRow } from '@/types';
 import { useFleetStore } from '@/store/useFleetStore';
 
 export interface ImportResult {
   robots: Robot[];
   tasks: Task[];
+  telemetry?: IoTTelemetryRow[];
   summary: {
     robotsCount: number;
     tasksCount: number;
+    telemetryCount?: number;
     detectedSheets: string[];
+    detectedFaults?: string[];
   };
   errors: string[];
 }
+
+// 20-row live poultry farm telemetry dataset provided by user
+export const DEFAULT_IOT_TELEMETRY: IoTTelemetryRow[] = [
+  { id: 'IOT-01', datetime: '26/09/2026 00:28:09', tem1: 32.3, tem2: 31.6, avgTem: 31.95, humidity1: 59, humidity2: 57, s1: 'NO_WATER', s2: 'NO_WATER', motor: 'ON', status: 'NORMAL', mode: 'MODE1' },
+  { id: 'IOT-02', datetime: '26/09/2026 00:28:39', tem1: 32.3, tem2: 31.6, avgTem: 31.95, humidity1: 59, humidity2: 57, s1: 'WATER', s2: 'WATER', motor: 'ON', status: 'NORMAL', mode: 'MODE1' },
+  { id: 'IOT-03', datetime: '26/09/2026 00:29:09', tem1: 32.3, tem2: 31.6, avgTem: 31.95, humidity1: 59, humidity2: 57, s1: 'NO_WATER', s2: 'NO_WATER', motor: 'ON', status: 'WAIT_DRY_RUN', mode: 'MODE2' },
+  { id: 'IOT-04', datetime: '26/09/2026 00:29:39', tem1: 32.3, tem2: 31.6, avgTem: 31.95, humidity1: 59, humidity2: 57, s1: 'NO_WATER', s2: 'NO_WATER', motor: 'ON', status: 'TANK_EMPTY', mode: 'MODE3' },
+  { id: 'IOT-05', datetime: '26/09/2026 00:30:10', tem1: 32.3, tem2: 31.6, avgTem: 31.95, humidity1: 59, humidity2: 57, s1: 'NO_WATER', s2: 'NO_WATER', motor: 'OFF', status: 'PIPE_DAMAGE', mode: 'MODE4' },
+  { id: 'IOT-06', datetime: '26/09/2026 00:30:40', tem1: 32.3, tem2: 31.6, avgTem: 31.95, humidity1: 59, humidity2: 57, s1: 'WATER', s2: 'WATER', motor: 'ON', status: 'PIPE_NORMAL', mode: 'MODE4' },
+  { id: 'IOT-07', datetime: '26/09/2026 00:31:09', tem1: 32.3, tem2: 31.6, avgTem: 31.95, humidity1: 59, humidity2: 57, s1: 'NO_WATER', s2: 'NO_WATER', motor: 'OFF', status: 'PIPE_DAMAGE', mode: 'MODE4' },
+  { id: 'IOT-08', datetime: '26/09/2026 00:31:40', tem1: 32.3, tem2: 31.6, avgTem: 31.95, humidity1: 59, humidity2: 57, s1: 'WATER', s2: 'WATER', motor: 'ON', status: 'NORMAL', mode: 'MODE1' },
+  { id: 'IOT-09', datetime: '26/09/2026 00:32:09', tem1: 32.3, tem2: 31.6, avgTem: 31.95, humidity1: 58, humidity2: 57, s1: 'WATER', s2: 'WATER', motor: 'ON', status: 'NORMAL', mode: 'MODE2' },
+  { id: 'IOT-10', datetime: '26/09/2026 00:32:40', tem1: 32.3, tem2: 31.6, avgTem: 31.95, humidity1: 58, humidity2: 57, s1: 'NO_WATER', s2: 'NO_WATER', motor: 'ON', status: 'TANK_EMPTY', mode: 'MODE3' },
+  { id: 'IOT-11', datetime: '26/09/2026 00:33:10', tem1: 32.3, tem2: 31.6, avgTem: 31.95, humidity1: 59, humidity2: 57, s1: 'NO_WATER', s2: 'NO_WATER', motor: 'ON', status: 'TANK_EMPTY', mode: 'MODE3' },
+  { id: 'IOT-12', datetime: '26/09/2026 00:33:44', tem1: 32.3, tem2: 31.6, avgTem: 31.95, humidity1: 58, humidity2: 57, s1: 'WATER', s2: 'WATER', motor: 'OFF', status: 'TANK_FULL', mode: 'MODE3' },
+  { id: 'IOT-13', datetime: '26/09/2026 00:34:10', tem1: 32.3, tem2: 31.6, avgTem: 31.95, humidity1: 58, humidity2: 57, s1: 'NO_WATER', s2: 'NO_WATER', motor: 'ON', status: 'TANK_EMPTY', mode: 'MODE3' },
+  { id: 'IOT-14', datetime: '26/09/2026 00:34:40', tem1: 32.3, tem2: 31.6, avgTem: 31.95, humidity1: 58, humidity2: 57, s1: 'NO_WATER', s2: 'NO_WATER', motor: 'ON', status: 'TANK_EMPTY', mode: 'MODE3' },
+  { id: 'IOT-15', datetime: '26/09/2026 00:35:10', tem1: 32.3, tem2: 31.6, avgTem: 31.95, humidity1: 58, humidity2: 57, s1: 'WATER', s2: 'NO_WATER', motor: 'OFF', status: 'PIPE2_ERROR', mode: 'MODE4' },
+  { id: 'IOT-16', datetime: '26/09/2026 00:35:42', tem1: 32.3, tem2: 31.6, avgTem: 31.95, humidity1: 58, humidity2: 57, s1: 'WATER', s2: 'WATER', motor: 'ON', status: 'PIPE_NORMAL', mode: 'MODE4' },
+  { id: 'IOT-17', datetime: '26/09/2026 00:36:10', tem1: 32.3, tem2: 31.6, avgTem: 31.95, humidity1: 58, humidity2: 57, s1: 'NO_WATER', s2: 'NO_WATER', motor: 'OFF', status: 'PIPE_DAMAGE', mode: 'MODE4' },
+  { id: 'IOT-18', datetime: '26/09/2026 00:36:40', tem1: 32.3, tem2: 31.6, avgTem: 31.95, humidity1: 58, humidity2: 57, s1: 'WATER', s2: 'WATER', motor: 'ON', status: 'PIPE_NORMAL', mode: 'MODE4' },
+  { id: 'IOT-19', datetime: '26/09/2026 00:37:10', tem1: 32.3, tem2: 31.6, avgTem: 31.95, humidity1: 58, humidity2: 57, s1: 'WATER', s2: 'WATER', motor: 'ON', status: 'PIPE_NORMAL', mode: 'MODE4' },
+];
 
 // Normalize key names for flexible column matching
 function normalizeKey(key: string): string {
@@ -33,6 +59,90 @@ function findValue(row: Record<string, any>, candidates: string[]): any {
     }
   }
   return undefined;
+}
+
+// Convert arbitrary sheet rows into IoTTelemetryRow items and reactive tasks
+export function parseIoTTelemetryFromRows(rows: Record<string, any>[]): { telemetry: IoTTelemetryRow[]; generatedTasks: Task[] } {
+  const telemetry: IoTTelemetryRow[] = [];
+  const generatedTasks: Task[] = [];
+
+  rows.forEach((row, idx) => {
+    const dateVal = findValue(row, ['date', 'datetime', 'timestamp', 'time_stamp']) || '26/09/2026';
+    const timeVal = findValue(row, ['time', 'clock', 'entry_time']) || '';
+    const datetime = timeVal ? `${dateVal} ${timeVal}`.trim() : String(dateVal);
+
+    const tem1 = parseFloat(findValue(row, ['tem1', 'temp1', 'temperature1', 't1'])) || 32.3;
+    const tem2 = parseFloat(findValue(row, ['tem2', 'temp2', 'temperature2', 't2'])) || 31.6;
+    const avgTem = parseFloat(findValue(row, ['avgtem', 'avgtemp', 'meantemp', 'avg_tem', 'avg_temp'])) || ((tem1 + tem2) / 2);
+
+    const hum1 = parseFloat(findValue(row, ['humidity1', 'humidity_1', 'hum1', 'h1'])) || 59;
+    const hum2 = parseFloat(findValue(row, ['humidity2', 'humidity_2', 'hum2', 'h2'])) || 57;
+
+    const rawS1 = String(findValue(row, ['s1', 'sensor1', 'sensor_1', 'flow1', 'flow_1']) || '').toUpperCase();
+    const s1 = rawS1.includes('NO') ? 'NO_WATER' : 'WATER';
+
+    const rawS2 = String(findValue(row, ['s2', 'sensor2', 'sensor_2', 'flow2', 'flow_2']) || '').toUpperCase();
+    const s2 = rawS2.includes('NO') ? 'NO_WATER' : 'WATER';
+
+    const rawMotor = String(findValue(row, ['motor', 'pump', 'pump_motor', 'relay']) || '').toUpperCase();
+    const motor = rawMotor.includes('OFF') || rawMotor.includes('0') ? 'OFF' : 'ON';
+
+    const rawStatus = String(findValue(row, ['status', 'state', 'fault', 'alarm']) || 'NORMAL').toUpperCase().trim();
+    const rawMode = String(findValue(row, ['mode', 'control_mode', 'operating_mode']) || 'MODE1').toUpperCase().trim();
+
+    telemetry.push({
+      id: `IOT-${String(idx + 1).padStart(2, '0')}`,
+      datetime,
+      tem1,
+      tem2,
+      avgTem,
+      humidity1: hum1,
+      humidity2: hum2,
+      s1,
+      s2,
+      motor,
+      status: rawStatus,
+      mode: rawMode,
+    });
+
+    // Generate emergency task for critical faults in this row
+    if (rawStatus.includes('PIPE_DAMAGE')) {
+      generatedTasks.push({
+        id: `TASK-PIPE-DMG-${idx + 1}`,
+        name: `EMERGENCY: Seal Main Pipeline Breach (Logged @ ${datetime})`,
+        priority: 'critical',
+        requiredCapability: 'water_inspection',
+        location: { x: 500, y: 380 }, // Pump Station 1 Main Intake
+        status: 'pending',
+        createdAt: Date.now(),
+        description: `IoT Telemetry Fault: Main pipeline pressure collapsed. Motor shut off for burst protection.`,
+      });
+    } else if (rawStatus.includes('PIPE2_ERROR')) {
+      generatedTasks.push({
+        id: `TASK-PIPE2-ERR-${idx + 1}`,
+        name: `EMERGENCY: Clear Pipe 2 Differential Blockage (Logged @ ${datetime})`,
+        priority: 'critical',
+        requiredCapability: 'water_inspection',
+        location: { x: 560, y: 165 }, // Shed 2 Line 2B
+        status: 'pending',
+        createdAt: Date.now(),
+        description: `IoT Telemetry Fault: S1=WATER but S2=NO_WATER. Differential line error detected.`,
+      });
+    } else if (rawStatus.includes('WAIT_DRY_RUN')) {
+      generatedTasks.push({
+        id: `TASK-DRY-RUN-${idx + 1}`,
+        name: `INSPECTION: Verify Borewell Water Inflow (Dry-Run Countdown)`,
+        priority: 'high',
+        requiredCapability: 'utility_transport',
+        location: { x: 1000, y: 100 }, // Water Tank Alpha
+        status: 'pending',
+        createdAt: Date.now(),
+        description: `Pump running dry with NO_WATER on sensors. Inspect supply valves.`,
+      });
+    }
+  });
+
+  return { telemetry, generatedTasks };
 }
 
 // Convert arbitrary sheet rows to Robot objects
@@ -141,21 +251,32 @@ export function parseExcelOrCsv(buffer: ArrayBuffer | string, fileName: string):
   const errors: string[] = [];
   let robots: Robot[] = [];
   let tasks: Task[] = [];
+  let telemetry: IoTTelemetryRow[] | undefined = undefined;
   let detectedSheets: string[] = [];
+  let detectedFaults: string[] = [];
 
   try {
     if (fileName.endsWith('.csv') && typeof buffer === 'string') {
       const parsed = Papa.parse<Record<string, any>>(buffer, { header: true, skipEmptyLines: true });
       const rows = parsed.data;
 
-      // Determine if file represents robots, tasks, or combined
+      // Determine if file represents IoT telemetry, tasks, or robots
+      const isTelemetrySheet = rows.some(r => findValue(r, ['tem1', 'temp1', 'temperature1', 's1', 's2', 'avgtem', 'motor']) !== undefined);
       const isTaskSheet = rows.some(r => findValue(r, ['task_id', 'taskid', 'required_capability', 'priority']) !== undefined);
-      if (isTaskSheet) {
+
+      if (isTelemetrySheet) {
+        const parsedTelem = parseIoTTelemetryFromRows(rows);
+        telemetry = parsedTelem.telemetry;
+        tasks = parsedTelem.generatedTasks;
+        detectedFaults = Array.from(new Set(telemetry.map(t => t.status).filter(s => s !== 'NORMAL' && s !== 'PIPE_NORMAL')));
+        detectedSheets = [fileName || 'IoT Telemetry'];
+      } else if (isTaskSheet) {
         tasks = parseTasksFromRows(rows);
+        detectedSheets = [fileName];
       } else {
         robots = parseRobotsFromRows(rows);
+        detectedSheets = [fileName];
       }
-      detectedSheets = [fileName];
     } else {
       // Use XLSX parser for .xlsx, .xls, or binary CSV
       const workbook = XLSX.read(buffer, { type: typeof buffer === 'string' ? 'binary' : 'array' });
@@ -167,10 +288,17 @@ export function parseExcelOrCsv(buffer: ArrayBuffer | string, fileName: string):
         if (rows.length === 0) continue;
 
         const lower = sheetName.toLowerCase();
-        if (lower.includes('robot') || lower.includes('fleet') || lower.includes('agent')) {
+        const hasTelemetryFields = rows.some(r => findValue(r, ['tem1', 'temp1', 'temperature1', 's1', 's2', 'avgtem', 'motor']) !== undefined);
+
+        if (hasTelemetryFields || lower.includes('telemetry') || lower.includes('sensor') || lower.includes('iot')) {
+          const parsedTelem = parseIoTTelemetryFromRows(rows);
+          telemetry = parsedTelem.telemetry;
+          tasks = [...tasks, ...parsedTelem.generatedTasks];
+          detectedFaults = Array.from(new Set(telemetry.map(t => t.status).filter(s => s !== 'NORMAL' && s !== 'PIPE_NORMAL')));
+        } else if (lower.includes('robot') || lower.includes('fleet') || lower.includes('agent')) {
           robots = parseRobotsFromRows(rows);
         } else if (lower.includes('task') || lower.includes('order') || lower.includes('job') || lower.includes('mission')) {
-          tasks = parseTasksFromRows(rows);
+          tasks = [...tasks, ...parseTasksFromRows(rows)];
         } else {
           // Auto-detect based on row fields
           const hasTaskFields = rows.some(r => findValue(r, ['task_id', 'taskid', 'priority']) !== undefined);
@@ -193,10 +321,13 @@ export function parseExcelOrCsv(buffer: ArrayBuffer | string, fileName: string):
   return {
     robots,
     tasks,
+    telemetry,
     summary: {
       robotsCount: robots.length,
       tasksCount: tasks.length,
+      telemetryCount: telemetry?.length || 0,
       detectedSheets,
+      detectedFaults,
     },
     errors,
   };
@@ -244,6 +375,12 @@ export async function parseGoogleSheetUrl(url: string): Promise<ImportResult> {
 export function applyImportedData(result: ImportResult) {
   const store = useFleetStore.getState();
 
+  // 1. If IoT telemetry is present, load it into store
+  if (result.telemetry && result.telemetry.length > 0) {
+    store.loadTelemetryLogs(result.telemetry);
+  }
+
+  // 2. Load Robots if provided
   if (result.robots.length > 0) {
     store.robots = result.robots;
     if (store.engine) {
@@ -253,11 +390,16 @@ export function applyImportedData(result: ImportResult) {
     }
   }
 
+  // 3. Load Tasks & Trigger Negotiation
   if (result.tasks.length > 0) {
-    store.tasks = result.tasks;
     if (store.engine) {
-      store.engine.tasks.clear();
-      result.tasks.forEach(t => store.engine?.tasks.set(t.id, t));
+      result.tasks.forEach(t => {
+        store.engine?.tasks.set(t.id, t);
+      });
+      store.engine.assignPendingTasks();
+      store.tasks = [...store.engine.tasks.values()];
+    } else {
+      store.tasks = [...store.tasks, ...result.tasks];
     }
   }
 

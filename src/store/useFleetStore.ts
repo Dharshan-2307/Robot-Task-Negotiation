@@ -6,7 +6,8 @@ import { create } from 'zustand';
 import {
   Robot, Task, NegotiationEvent, ConflictEvent, DeadlockEvent,
   Alert, LiveEvent, FleetAnalytics, SimulationConfig, MapConfig,
-  ConnectionStatus, SensorUnit, FaultIncident, HeroDemoState, WaterPipeSection
+  ConnectionStatus, SensorUnit, FaultIncident, HeroDemoState, WaterPipeSection,
+  IoTTelemetryRow
 } from '@/types';
 import { SimulationEngine } from '@/engine/SimulationEngine';
 
@@ -30,6 +31,10 @@ interface FleetStore {
   map: MapConfig;
   heroDemoState: HeroDemoState | null;
   isControllerOnline: boolean;
+
+  // --- IoT Telemetry Logs ---
+  telemetryLogs: IoTTelemetryRow[];
+  activeTelemetryIndex: number;
 
   // --- UI State ---
   selectedRobotId: string | null;
@@ -65,6 +70,10 @@ interface FleetStore {
   failWaterPipe: (pipeId: string) => void;
   triggerCommLossZone: (zone?: string) => void;
   triggerLowBatteryEvent: () => void;
+
+  // IoT Telemetry Step & Load
+  loadTelemetryLogs: (logs: IoTTelemetryRow[]) => void;
+  stepTelemetryLog: (index: number) => void;
 
   selectRobot: (id: string | null) => void;
   selectTask: (id: string | null) => void;
@@ -118,6 +127,10 @@ export const useFleetStore = create<FleetStore>((set, get) => ({
   map: { width: 1200, height: 800, gridSize: 40, obstacles: [], chargingStations: [], taskStations: [], sensors: [], waterPipes: [] },
   heroDemoState: null,
   isControllerOnline: true,
+
+  // --- IoT Telemetry Logs ---
+  telemetryLogs: [],
+  activeTelemetryIndex: 0,
 
   selectedRobotId: null,
   selectedTaskId: null,
@@ -240,6 +253,44 @@ export const useFleetStore = create<FleetStore>((set, get) => ({
 
   triggerLowBatteryEvent: () => {
     get().engine?.triggerLowBatteryEvent();
+  },
+
+  loadTelemetryLogs: (logs: IoTTelemetryRow[]) => {
+    set({ telemetryLogs: logs, activeTelemetryIndex: 0 });
+    get().stepTelemetryLog(0);
+  },
+
+  stepTelemetryLog: (index: number) => {
+    const { telemetryLogs, engine } = get();
+    if (!telemetryLogs || telemetryLogs.length === 0) return;
+    const boundedIndex = Math.max(0, Math.min(telemetryLogs.length - 1, index));
+    const log = telemetryLogs[boundedIndex];
+    set({ activeTelemetryIndex: boundedIndex });
+
+    if (engine) {
+      // 1. Update W1209 temperature sensors
+      const tempSensors = Array.from(engine.sensors.values()).filter(s => s.type === 'W1209-temp');
+      tempSensors.forEach(s => {
+        s.currentValue = log.avgTem || log.tem1;
+        s.status = s.currentValue > 35 ? 'critical' : s.currentValue > 30 ? 'warning' : 'nominal';
+        s.lastReadingTime = Date.now();
+      });
+
+      // 2. Handle Water & Pipe States
+      if (log.status === 'PIPE_DAMAGE') {
+        engine.failWaterPipe('PIPE-09');
+      } else if (log.status === 'PIPE2_ERROR') {
+        engine.failWaterPipe('PIPE-04');
+      } else if (log.status === 'PIPE_NORMAL' || log.status === 'NORMAL') {
+        for (const pipe of engine.waterPipes.values()) {
+          pipe.status = 'normal';
+          pipe.flowRate = 42.0;
+          pipe.pressure = 2.4;
+        }
+      }
+
+      get().syncFromEngine();
+    }
   },
 
   selectRobot: (id) => set({ selectedRobotId: id }),

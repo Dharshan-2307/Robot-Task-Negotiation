@@ -1194,7 +1194,7 @@ export class SimulationEngine {
     robot.lastUpdated = Date.now();
   }
 
-  private assignPendingTasks() {
+  public assignPendingTasks() {
     const pendingTasks = [...this.tasks.values()].filter(t => t.status === 'pending');
     const idleRobots = [...this.robots.values()].filter(r => r.state === 'idle' && r.battery > 20);
 

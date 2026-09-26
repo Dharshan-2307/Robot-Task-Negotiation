@@ -75,6 +75,22 @@ export interface WaterPipeSection {
   pressure: number; // Bar
 }
 
+// --- Poultry IoT Telemetry Log (Google Sheet format) ---
+export interface IoTTelemetryRow {
+  id: string;
+  datetime: string;
+  tem1: number;
+  tem2: number;
+  avgTem: number;
+  humidity1: number;
+  humidity2: number;
+  s1: 'WATER' | 'NO_WATER';
+  s2: 'WATER' | 'NO_WATER';
+  motor: 'ON' | 'OFF';
+  status: string; // 'NORMAL' | 'WAIT_DRY_RUN' | 'TANK_EMPTY' | 'PIPE_DAMAGE' | 'PIPE_NORMAL' | 'TANK_FULL' | 'PIPE2_ERROR'
+  mode: string;   // 'MODE1' | 'MODE2' | 'MODE3' | 'MODE4'
+}
+
 // --- Fault Types ---
 
 export type FaultCategory = 'high-temperature' | 'water-blockage' | 'water-leakage' | 'power-abnormality' | 'equipment-failure';
